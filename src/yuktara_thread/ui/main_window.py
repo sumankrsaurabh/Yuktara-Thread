@@ -15,6 +15,7 @@ from yuktara_thread.application.handover import export_workspace_project, import
 from yuktara_thread.application.handover_report import render_handover_report
 from yuktara_thread.application.readiness import assess_handover_readiness
 from yuktara_thread.application.secret_scan import scan_selected_files
+from yuktara_thread.application.search import search_workspace
 from yuktara_thread.application.workspace import WorkspaceService
 from yuktara_thread.infrastructure.package import PackageError, import_package, preview_package
 
@@ -477,6 +478,65 @@ class ProjectPage(QWidget):
         tabs.addTab(ActivityPanel(workspace, project.project_id), "Activity")
 
 
+class SearchDialog(QDialog):
+    """Search local project content and open the owning project."""
+
+    def __init__(self, workspace: WorkspaceService, on_open=None, parent=None) -> None:
+        super().__init__(parent)
+        self.workspace = workspace
+        self.on_open = on_open
+        self.setWindowTitle("Search workspace")
+        self.setMinimumSize(640, 480)
+        layout = QVBoxLayout(self)
+        row = QHBoxLayout()
+        self.query = QLineEdit()
+        self.query.setPlaceholderText("Search projects, context, decisions, tasks…")
+        self.query.returnPressed.connect(self.run_search)
+        search_button = QPushButton("Search")
+        search_button.setObjectName("primary")
+        search_button.clicked.connect(self.run_search)
+        row.addWidget(self.query, 1)
+        row.addWidget(search_button)
+        layout.addLayout(row)
+        self.results = QListWidget()
+        self.results.itemDoubleClicked.connect(lambda _item: self.open_selected())
+        layout.addWidget(self.results, 1)
+        self.status = QLabel("Search is local to this workspace. Enter at least two characters.")
+        self.status.setObjectName("muted")
+        layout.addWidget(self.status)
+        open_button = QPushButton("Open project")
+        open_button.clicked.connect(self.open_selected)
+        layout.addWidget(open_button, 0, Qt.AlignmentFlag.AlignRight)
+
+    def run_search(self) -> None:
+        try:
+            matches = search_workspace(self.workspace, self.query.text())
+        except ValueError as exc:
+            self.status.setText(str(exc))
+            self.results.clear()
+            return
+        self.results.clear()
+        for result in matches:
+            item = QListWidgetItem(
+                f"{result['project_name']}  ·  {result['entity_type'].title()}\n"
+                f"{result['title']}\n{result['excerpt'] or ''}"
+            )
+            item.setData(Qt.ItemDataRole.UserRole, result)
+            self.results.addItem(item)
+        self.status.setText(
+            f"{len(matches)} result(s). Double-click a result to open its project."
+        )
+
+    def open_selected(self) -> None:
+        item = self.results.currentItem()
+        if item is None:
+            return
+        result = item.data(Qt.ItemDataRole.UserRole)
+        if self.on_open is not None:
+            self.on_open(str(result["project_id"]))
+        self.accept()
+
+
 class PackagePreviewDialog(QDialog):
     """Verified package preview with an explicit, staged file-extraction action."""
 
@@ -675,6 +735,8 @@ class MainWindow(QMainWindow):
         brand = QLabel("Yuktara Thread")
         brand.setObjectName("brand")
         side_layout.addWidget(brand)
+        search_button = QPushButton("Search workspace…")
+        side_layout.addWidget(search_button)
         side_layout.addWidget(QLabel("WORKSPACE"))
         self.projects = QListWidget()
         side_layout.addWidget(self.projects, 1)
@@ -712,6 +774,7 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(root)
 
         create.clicked.connect(self.create_project)
+        search_button.clicked.connect(self.open_search_dialog)
         create_handover.clicked.connect(self.create_handover_package)
         backup_button.clicked.connect(self.backup_current_workspace)
         restore_button.clicked.connect(self.restore_workspace_backup)
@@ -730,6 +793,10 @@ class MainWindow(QMainWindow):
                 self.projects.setCurrentItem(item)
         if not projects:
             self.pages.setCurrentWidget(self.empty)
+
+    def open_search_dialog(self) -> None:
+        dialog = SearchDialog(self.workspace, on_open=self.refresh_projects, parent=self)
+        dialog.exec()
 
     def backup_current_workspace(self) -> None:
         output, _selected_filter = QFileDialog.getSaveFileName(
