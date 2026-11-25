@@ -2,6 +2,20 @@
 
 All notable changes to Yuktara Thread are documented here. Development versions may change before a stable release.
 
+## 0.6.3.dev0 — 2026-11-25
+
+### Added
+- Non-destructive workspace import inspection before extraction or database writes.
+- Candidate detection by source project ID and case-insensitive project name, plus advisory title collisions for decisions, tasks, milestones and references.
+- Desktop warning and explicit confirmation when an incoming handover resembles existing workspace content; import continues to create a separate project and never merges or replaces records.
+- Regression tests proving conflict inspection leaves the destination workspace unchanged.
+
+### Limitations
+- Conflict detection is advisory and based on project identity/name and exact normalized record titles; it does not perform semantic matching or merge records.
+
+
+All notable changes to Yuktara Thread are documented here. Development versions may change before a stable release.
+
 ## 0.6.2.dev0 — 2026-11-25
 
 ### Added
