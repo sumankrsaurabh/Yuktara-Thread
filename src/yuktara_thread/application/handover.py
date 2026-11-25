@@ -9,6 +9,7 @@ import sqlite3
 from typing import Any
 from uuid import uuid4
 
+from yuktara_thread.application.readiness import assess_handover_readiness
 from yuktara_thread.application.workspace import WorkspaceService
 from yuktara_thread.domain.context.models import CONTEXT_TITLES
 from yuktara_thread.domain.projects.models import Project, validate_project_name
@@ -44,16 +45,19 @@ def export_workspace_project(
             str(task["task_id"])
         )
     ]
+    context_sections = workspace.get_context(project_id)
     payload: dict[str, Any] = {
         **asdict(project),
-        "context_sections": [
-            asdict(section) for section in workspace.get_context(project_id)
-        ],
+        "context_sections": [asdict(section) for section in context_sections],
         **{f"{kind}s": values for kind, values in records.items()},
         "task_dependencies": dependencies,
         "activity_events": workspace.intelligence.timeline(project_id, limit=1000),
         "handover_schema_version": 1,
     }
+    payload["handover_readiness"] = assess_handover_readiness(
+        project, context_sections, records["decision"], records["task"],
+        records["milestone"], records["reference"],
+    )
     return create_package(files_directory, output_file, payload)
 
 
