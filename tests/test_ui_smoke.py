@@ -11,7 +11,7 @@ from PySide6.QtWidgets import QApplication, QFileDialog, QInputDialog, QLabel, Q
 from yuktara_thread.domain.models import ProjectContext
 from yuktara_thread.infrastructure.package import create_package, preview_package
 from yuktara_thread.ui.main_window import (
-    ActivityPanel, ArchivedProjectsDialog, EntityEditorDialog, EntityPanel, MainWindow, PackagePreviewDialog, ReadinessPanel, SearchDialog,
+    ActivityPanel, ArchivedProjectsDialog, DeletedRecordsDialog, EntityEditorDialog, EntityPanel, MainWindow, PackagePreviewDialog, ReadinessPanel, SearchDialog,
 )
 
 
@@ -370,4 +370,62 @@ def test_archived_projects_dialog_restores_project_and_refreshes_workspace(
     assert window.projects.count() == 1
     assert window.workspace.intelligence.list_records(project.project_id, "task")[0]["title"] == "Keep task"
     dispose_widget(dialog, application)
+    dispose_widget(window, application)
+
+
+
+def test_deleted_records_dialog_restores_original_record(tmp_path, application, monkeypatch):
+    window = MainWindow(tmp_path / "deleted-records-ui.sqlite3")
+    project = window.workspace.create_project("Deleted records UI")
+    task = window.workspace.intelligence.create_task(project.project_id, title="Restore this task")
+    window.workspace.intelligence.delete_record(project.project_id, "task", task["task_id"])
+    monkeypatch.setattr(
+        QMessageBox, "question",
+        lambda *_args, **_kwargs: QMessageBox.StandardButton.Yes,
+    )
+    panel = DeletedRecordsDialog(window.workspace, project.project_id, "task")
+    assert panel.records.count() == 1
+    panel.records.setCurrentRow(0)
+    panel.restore_selected()
+    assert panel.records.count() == 0
+    active = window.workspace.intelligence.list_records(project.project_id, "task")
+    assert len(active) == 1
+    assert active[0]["task_id"] == task["task_id"]
+    events = window.workspace.intelligence.timeline(project.project_id)
+    assert "task.restored" in [event["event_type"] for event in events]
+    dispose_widget(panel, application)
+    dispose_widget(window, application)
+
+
+def test_activity_panel_date_filter_and_json_export(tmp_path, application, monkeypatch):
+    window = MainWindow(tmp_path / "activity-export-ui.sqlite3")
+    project = window.workspace.create_project("Activity export")
+    window.workspace.intelligence.create_task(project.project_id, title="Export this event")
+    panel = ActivityPanel(window.workspace, project.project_id)
+    assert panel.list.count() >= 2
+    date = str(panel.events[0]["created_at"])[:10]
+    panel.date_from.setText(date)
+    panel.date_to.setText(date)
+    assert panel.list.count() == len(panel.events)
+    panel.date_from.setText("not-a-date")
+    assert panel.list.count() == 0
+    assert "valid dates" in panel.filter_status.text()
+    panel.date_from.clear()
+    assert panel.list.count() == len(panel.events)
+
+    output = tmp_path / "activity.json"
+    monkeypatch.setattr(
+        QFileDialog, "getSaveFileName",
+        lambda *_args, **_kwargs: (str(output), "JSON files (*.json)"),
+    )
+    monkeypatch.setattr(
+        QMessageBox, "information",
+        lambda *_args, **_kwargs: QMessageBox.StandardButton.Ok,
+    )
+    panel.export_activity()
+    import json
+    exported = json.loads(output.read_text(encoding="utf-8"))
+    assert len(exported) == len(panel.events)
+    assert any(event["event_type"] == "task.created" for event in exported)
+    dispose_widget(panel, application)
     dispose_widget(window, application)
