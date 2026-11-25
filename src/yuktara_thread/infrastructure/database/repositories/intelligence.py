@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from uuid import uuid4
 
 from yuktara_thread.infrastructure.database.connection import Database
+from yuktara_thread.infrastructure.database.repositories.events import append_project_event
 
 
 def _now() -> str:
@@ -19,21 +20,15 @@ class ProjectIntelligenceRepository:
         "milestone": ("milestones", "milestone_id"),
         "reference": ("project_references", "reference_id"),
     }
+    FIELDS = {
+        "decision": {"title", "problem", "selected_option", "alternatives", "rationale", "consequences", "status"},
+        "task": {"title", "description", "status", "priority", "owner", "due_at"},
+        "milestone": {"title", "description", "due_at", "status"},
+        "reference": {"title", "reference_type", "uri", "notes"},
+    }
 
     def __init__(self, database: Database) -> None:
         self.database = database
-
-    @staticmethod
-    def _event(connection, project_id: str, event_type: str, entity_type: str,
-               entity_id: str | None, payload: dict[str, object], now: str) -> None:
-        # Event payloads are intentionally curated; never persist secrets or file contents here.
-        connection.execute(
-            """INSERT INTO project_events
-               (event_id, project_id, event_type, entity_type, entity_id, payload_json, created_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?)""",
-            (str(uuid4()), project_id, event_type, entity_type, entity_id,
-             json.dumps(payload, ensure_ascii=False, sort_keys=True), now),
-        )
 
     @staticmethod
     def _decode(kind: str, row: dict[str, object]) -> dict[str, object]:
@@ -41,11 +36,38 @@ class ProjectIntelligenceRepository:
             row["alternatives"] = json.loads(row.pop("alternatives_json"))
         return row
 
+    def _validate(self, kind: str, values: dict[str, object]) -> dict[str, object]:
+        if kind not in self.TABLES or not values or set(values) - self.FIELDS[kind]:
+            raise ValueError("Unsupported or empty project record update")
+        data = dict(values)
+        if "title" in data:
+            title = str(data["title"]).strip()
+            if not title or len(title) > 240:
+                raise ValueError("Title must contain 1–240 characters")
+            data["title"] = title
+        if kind == "decision":
+            if data.get("status", "proposed") not in {"proposed", "accepted", "rejected", "superseded"}:
+                raise ValueError("Invalid decision status")
+            if "alternatives" in data:
+                alternatives = data.pop("alternatives")
+                if not isinstance(alternatives, list) or not all(isinstance(x, str) for x in alternatives):
+                    raise ValueError("Decision alternatives must be a list of strings")
+                data["alternatives_json"] = json.dumps(alternatives, ensure_ascii=False)
+        elif kind == "task":
+            if data.get("status", "open") not in {"open", "in_progress", "blocked", "completed", "cancelled"}:
+                raise ValueError("Invalid task status")
+            if data.get("priority", "normal") not in {"low", "normal", "high", "critical"}:
+                raise ValueError("Invalid task priority")
+        elif kind == "milestone":
+            if data.get("status", "planned") not in {"planned", "in_progress", "completed", "cancelled"}:
+                raise ValueError("Invalid milestone status")
+        elif kind == "reference":
+            if data.get("reference_type", "other") not in {"document", "repository", "website", "issue", "person", "other"}:
+                raise ValueError("Invalid reference type")
+        return data
+
     def _create(self, kind: str, project_id: str, values: dict[str, object]) -> dict[str, object]:
         table, id_column = self.TABLES[kind]
-        title = str(values.get("title", "")).strip()
-        if not title or len(title) > 240:
-            raise ValueError("Title must contain 1–240 characters")
         defaults = {
             "decision": {"problem": "", "selected_option": "", "alternatives": [],
                          "rationale": "", "consequences": "", "status": "proposed"},
@@ -53,22 +75,7 @@ class ProjectIntelligenceRepository:
             "milestone": {"description": "", "due_at": None, "status": "planned"},
             "reference": {"reference_type": "other", "uri": "", "notes": ""},
         }[kind]
-        data = {**defaults, **values, "title": title}
-        if kind == "decision":
-            if data["status"] not in {"proposed", "accepted", "rejected", "superseded"}:
-                raise ValueError("Invalid decision status")
-            if not isinstance(data["alternatives"], list) or not all(isinstance(x, str) for x in data["alternatives"]):
-                raise ValueError("Decision alternatives must be a list of strings")
-            data["alternatives_json"] = json.dumps(data.pop("alternatives"), ensure_ascii=False)
-        elif kind == "task":
-            if data["status"] not in {"open", "in_progress", "blocked", "completed", "cancelled"}:
-                raise ValueError("Invalid task status")
-            if data["priority"] not in {"low", "normal", "high", "critical"}:
-                raise ValueError("Invalid task priority")
-        elif kind == "milestone" and data["status"] not in {"planned", "in_progress", "completed", "cancelled"}:
-            raise ValueError("Invalid milestone status")
-        elif kind == "reference" and data["reference_type"] not in {"document", "repository", "website", "issue", "person", "other"}:
-            raise ValueError("Invalid reference type")
+        data = self._validate(kind, {**defaults, **values})
         record_id, now = str(uuid4()), _now()
         columns = [id_column, "project_id", *data.keys(), "created_at", "updated_at"]
         params = [record_id, project_id, *data.values(), now, now]
@@ -80,18 +87,17 @@ class ProjectIntelligenceRepository:
                 f"INSERT INTO {table} ({', '.join(columns)}) VALUES ({', '.join('?' for _ in columns)})",
                 params,
             )
-            self._event(connection, project_id, f"{kind}.created", kind, record_id, {"title": title}, now)
+            append_project_event(connection, project_id=project_id, event_type=f"{kind}.created",
+                entity_type=kind, entity_id=record_id, payload={"title": data["title"]}, created_at=now)
             row = connection.execute(f"SELECT * FROM {table} WHERE {id_column} = ?", (record_id,)).fetchone()
         return self._decode(kind, dict(row))
 
     def create_decision(self, project_id: str, *, title: str, problem: str = "",
                         selected_option: str = "", alternatives: list[str] | None = None,
                         rationale: str = "", consequences: str = "", status: str = "proposed"):
-        return self._create("decision", project_id, {
-            "title": title, "problem": problem, "selected_option": selected_option,
-            "alternatives": alternatives or [], "rationale": rationale,
-            "consequences": consequences, "status": status,
-        })
+        return self._create("decision", project_id, {"title": title, "problem": problem,
+            "selected_option": selected_option, "alternatives": alternatives or [],
+            "rationale": rationale, "consequences": consequences, "status": status})
 
     def create_task(self, project_id: str, *, title: str, description: str = "",
                     status: str = "open", priority: str = "normal", owner: str = "",
@@ -108,6 +114,49 @@ class ProjectIntelligenceRepository:
                          uri: str = "", notes: str = ""):
         return self._create("reference", project_id, {"title": title,
             "reference_type": reference_type, "uri": uri, "notes": notes})
+
+    def update_record(self, project_id: str, entity_type: str, entity_id: str,
+                      **changes: object) -> dict[str, object]:
+        """Update an entity and append its event atomically."""
+        if entity_type not in self.TABLES:
+            raise ValueError("Unknown project entity type")
+        table, id_column = self.TABLES[entity_type]
+        data = self._validate(entity_type, changes)
+        now = _now()
+        assignments = ", ".join(f"{column} = ?" for column in data)
+        with self.database.transaction() as connection:
+            project = connection.execute("SELECT status FROM projects WHERE project_id = ?", (project_id,)).fetchone()
+            if project is None or project["status"] != "active":
+                raise LookupError("Active project not found")
+            cursor = connection.execute(
+                f"UPDATE {table} SET {assignments}, updated_at = ? WHERE {id_column} = ? AND project_id = ?",
+                (*data.values(), now, entity_id, project_id),
+            )
+            if cursor.rowcount != 1:
+                raise LookupError(f"{entity_type.title()} not found in active project")
+            append_project_event(connection, project_id=project_id, event_type=f"{entity_type}.updated",
+                entity_type=entity_type, entity_id=entity_id,
+                payload={"changed_fields": sorted(changes)}, created_at=now)
+            row = connection.execute(f"SELECT * FROM {table} WHERE {id_column} = ?", (entity_id,)).fetchone()
+        return self._decode(entity_type, dict(row))
+
+    def delete_record(self, project_id: str, entity_type: str, entity_id: str) -> None:
+        """Delete an entity, preserving a minimal deletion event in the same transaction."""
+        if entity_type not in self.TABLES:
+            raise ValueError("Unknown project entity type")
+        table, id_column = self.TABLES[entity_type]
+        now = _now()
+        with self.database.transaction() as connection:
+            row = connection.execute(
+                f"SELECT title FROM {table} WHERE {id_column} = ? AND project_id = ?",
+                (entity_id, project_id),
+            ).fetchone()
+            if row is None:
+                raise LookupError(f"{entity_type.title()} not found")
+            append_project_event(connection, project_id=project_id, event_type=f"{entity_type}.deleted",
+                entity_type=entity_type, entity_id=entity_id, payload={"title": row["title"]}, created_at=now)
+            connection.execute(f"DELETE FROM {table} WHERE {id_column} = ? AND project_id = ?",
+                               (entity_id, project_id))
 
     def list_records(self, project_id: str, entity_type: str) -> list[dict[str, object]]:
         if entity_type not in self.TABLES:
@@ -128,7 +177,6 @@ class ProjectIntelligenceRepository:
             ).fetchall()
             if len(rows) != 2 or task_id == depends_on_task_id:
                 raise ValueError("Both distinct tasks must belong to the same project")
-            # A -> B is cyclic if B already reaches A through its prerequisites.
             cycle = connection.execute(
                 """WITH RECURSIVE reachable(task_id) AS (
                        SELECT depends_on_task_id FROM task_dependencies WHERE task_id = ?
@@ -143,8 +191,9 @@ class ProjectIntelligenceRepository:
                 "INSERT INTO task_dependencies(task_id, depends_on_task_id, created_at) VALUES (?, ?, ?)",
                 (task_id, depends_on_task_id, now),
             )
-            self._event(connection, project_id, "task.dependency_added", "task", task_id,
-                        {"depends_on_task_id": depends_on_task_id}, now)
+            append_project_event(connection, project_id=project_id, event_type="task.dependency_added",
+                entity_type="task", entity_id=task_id,
+                payload={"depends_on_task_id": depends_on_task_id}, created_at=now)
 
     def list_task_dependencies(self, task_id: str) -> list[str]:
         with self.database.read() as connection:
