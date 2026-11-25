@@ -1,6 +1,6 @@
 # Implementation Status
 
-**Release:** 0.4.0.dev0  
+**Release:** 0.5.0.dev0  
 **Status:** pre-alpha; not production-ready
 
 ## Implemented
