@@ -64,6 +64,8 @@ def test_decision_editor_preserves_structured_fields(application):
     assert values["problem"] == "Where should local data live?"
     assert values["alternatives"] == ["JSON files", "SQLite"]
     assert values["status"] == "proposed"
+    assert dialog.fields["title"].accessibleName() == "Title"
+    assert dialog.fields["rationale"].accessibleName() == "Rationale"
     dispose_widget(dialog, application)
 
 
