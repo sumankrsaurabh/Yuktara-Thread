@@ -439,10 +439,11 @@ class PackagePreviewDialog(QDialog):
         summary = str(project.get("summary") or "No summary provided")
         total_bytes = sum(int(item["size"]) for item in preview["files"])
         overview = QLabel(
-            f"<b>{name}</b><br>{summary}<br><br>"
+            f"{name}\n{summary}\n\n"
             f"{preview['file_count']} files · {total_bytes:,} bytes · "
             f"Format {preview['format_version']}"
         )
+        overview.setTextFormat(Qt.TextFormat.PlainText)
         overview.setWordWrap(True)
         layout.addWidget(overview)
 
