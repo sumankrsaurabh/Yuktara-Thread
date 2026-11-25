@@ -240,6 +240,7 @@ def import_package(package_file: Path, destination: Path) -> Path:
     target = destination.expanduser()
     if not target.name or target.name in {".", ".."}:
         raise PackageError("Import destination must be a new directory path")
+    _safe_archive_name(f"files/{target.name}")
     parent = target.parent.resolve(strict=True)
     if not parent.is_dir():
         raise PackageError("Import destination parent must be a directory")
