@@ -30,6 +30,16 @@ thread import ./handover.thread --destination ./handover-import
 
 Import uses a temporary staging directory, checks the manifest and each extracted file's size and SHA-256 digest, then publishes the completed directory. On failure, staging files are removed. The basic `thread create` command contains project metadata and files. Workspace-aware `thread project export` additionally serializes context sections, decisions, tasks, milestones, references, task prerequisites and recent activity.
 
+## Search
+
+Search active projects and their context, decisions, tasks, milestones and references:
+
+```bash
+thread search --database ./workspace.sqlite3 --query "shader cache" --limit 50
+```
+
+Archived projects are excluded by default. Include them explicitly with `--include-archived`. Search is local, parameterized and bounded to 100 results; query length is limited to 2–200 characters.
+
 ## Workspace commands
 
 Initialize a local SQLite workspace:
