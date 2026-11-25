@@ -518,3 +518,30 @@ def test_activity_panel_refresh_loads_new_project_events(tmp_path, application):
     )
     dispose_widget(panel, application)
     dispose_widget(window, application)
+
+
+def test_workspace_accessibility_names_and_keyboard_shortcuts(tmp_path, application):
+    window = MainWindow(tmp_path / "accessibility.sqlite3")
+    project = window.workspace.create_project("Accessible project")
+    window.refresh_projects(project.project_id)
+    application.processEvents()
+
+    assert window.accessibleName() == "Yuktara Thread project workspace"
+    assert window.projects.accessibleName() == "Active workspace projects"
+    assert window.projects.focusPolicy() != Qt.FocusPolicy.NoFocus
+
+    tabs = window.project_page.findChild(QTabWidget, "projectTabs")
+    assert tabs is not None
+    assert tabs.accessibleName() == "Project sections"
+    assert tabs.tabBar().focusPolicy() != Qt.FocusPolicy.NoFocus
+
+    actions = {action.text(): action.shortcut().toString() for action in window.actions()}
+    assert actions["New project"] == "Ctrl+N"
+    assert actions["Search workspace"] == "Ctrl+K"
+    assert actions["Preview Thread package"] == "Ctrl+O"
+
+    task_panel = tabs.widget(3)
+    assert task_panel.list.accessibleName() == "Task records"
+    assert task_panel.prerequisite_picker.accessibleName() == "Choose prerequisite task"
+
+    dispose_widget(window, application)
