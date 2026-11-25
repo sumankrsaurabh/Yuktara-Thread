@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 from pathlib import Path
+from datetime import datetime
+import json
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
@@ -138,6 +140,76 @@ class EntityEditorDialog(QDialog):
         return result
 
 
+class DeletedRecordsDialog(QDialog):
+    """Review and restore soft-deleted records for one project entity type."""
+
+    def __init__(self, workspace: WorkspaceService, project_id: str, kind: str,
+                 on_restored=None, parent=None) -> None:
+        super().__init__(parent)
+        self.workspace = workspace
+        self.project_id = project_id
+        self.kind = kind
+        self.on_restored = on_restored
+        self.setWindowTitle(f"Deleted {kind}s")
+        self.setMinimumSize(520, 380)
+        layout = QVBoxLayout(self)
+        self.records = QListWidget()
+        layout.addWidget(self.records, 1)
+        self.status = QLabel("Deleted records can be restored without losing their identity.")
+        self.status.setObjectName("muted")
+        layout.addWidget(self.status)
+        actions = QHBoxLayout()
+        actions.addStretch(1)
+        close = QPushButton("Close")
+        restore = QPushButton("Restore selected")
+        restore.setObjectName("primary")
+        close.clicked.connect(self.reject)
+        restore.clicked.connect(self.restore_selected)
+        actions.addWidget(close)
+        actions.addWidget(restore)
+        layout.addLayout(actions)
+        self.refresh()
+
+    def refresh(self) -> None:
+        self.records.clear()
+        id_column = self.workspace.intelligence.TABLES[self.kind][1]
+        for record in self.workspace.intelligence.list_records(
+            self.project_id, self.kind, include_deleted=True
+        ):
+            if record.get("deleted_at") is None:
+                continue
+            item = QListWidgetItem(
+                f"{record['title']}  ·  deleted {record.get('deleted_at') or ''}"
+            )
+            item.setData(Qt.ItemDataRole.UserRole, record[id_column])
+            self.records.addItem(item)
+        self.status.setText(
+            f"{self.records.count()} deleted record(s). Restore keeps the original record ID."
+            if self.records.count() else "There are no deleted records of this type."
+        )
+
+    def restore_selected(self) -> None:
+        item = self.records.currentItem()
+        if item is None:
+            return
+        entity_id = str(item.data(Qt.ItemDataRole.UserRole))
+        answer = QMessageBox.question(
+            self, "Restore record",
+            "Restore this record to the active project?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if answer != QMessageBox.StandardButton.Yes:
+            return
+        try:
+            self.workspace.restore_record(self.project_id, self.kind, entity_id)
+            self.refresh()
+            if self.on_restored is not None:
+                self.on_restored()
+        except (ValueError, LookupError, RuntimeError) as exc:
+            QMessageBox.warning(self, "Could not restore record", str(exc))
+
+
 class EntityPanel(QWidget):
     """Full-field CRUD editor for decisions, tasks, milestones and references."""
 
@@ -158,15 +230,18 @@ class EntityPanel(QWidget):
         add = QPushButton(f"Add {kind}")
         edit = QPushButton("Edit details")
         delete = QPushButton("Delete")
+        recover = QPushButton("Deleted records…")
         add.setObjectName("primary")
         actions.addWidget(add)
         actions.addStretch(1)
+        actions.addWidget(recover)
         actions.addWidget(edit)
         actions.addWidget(delete)
         layout.addLayout(actions)
         add.clicked.connect(self.add_record)
         edit.clicked.connect(self.edit_record)
         delete.clicked.connect(self.delete_record)
+        recover.clicked.connect(self.open_deleted_records)
 
         self.dependency_list = None
         self.prerequisite_picker = None
@@ -249,6 +324,16 @@ class EntityPanel(QWidget):
         except (ValueError, LookupError, RuntimeError) as exc:
             QMessageBox.warning(self, "Could not remove prerequisite", str(exc))
 
+    def open_deleted_records(self) -> None:
+        dialog = DeletedRecordsDialog(
+            self.workspace, self.project_id, self.kind,
+            on_restored=self.refresh, parent=self,
+        )
+        dialog.exec()
+        self.refresh()
+        if self.kind == "task":
+            self.refresh_dependencies()
+
     def add_record(self) -> None:
         dialog = EntityEditorDialog(self.kind, parent=self)
         if dialog.exec() != QDialog.DialogCode.Accepted:
@@ -308,21 +393,27 @@ class ActivityPanel(QWidget):
         "project.created": "Project created",
         "project.updated": "Project details updated",
         "project.archived": "Project archived",
+        "project.restored": "Project restored",
+        "handover.imported": "Handover imported",
         "context.updated": "Context updated",
         "decision.created": "Decision added",
         "decision.updated": "Decision updated",
         "decision.deleted": "Decision deleted",
+        "decision.restored": "Decision restored",
         "task.created": "Task added",
         "task.updated": "Task updated",
         "task.deleted": "Task deleted",
+        "task.restored": "Task restored",
         "task.dependency_added": "Task prerequisite added",
         "task.dependency_removed": "Task prerequisite removed",
         "milestone.created": "Milestone added",
         "milestone.updated": "Milestone updated",
         "milestone.deleted": "Milestone deleted",
+        "milestone.restored": "Milestone restored",
         "reference.created": "Reference added",
         "reference.updated": "Reference updated",
         "reference.deleted": "Reference deleted",
+        "reference.restored": "Reference restored",
     }
 
     def __init__(self, workspace: WorkspaceService, project_id: str) -> None:
@@ -340,14 +431,30 @@ class ActivityPanel(QWidget):
         event_types = sorted({str(event["event_type"]) for event in self.events})
         for event_type in event_types:
             self.kind_filter.addItem(self.LABELS.get(event_type, event_type), event_type)
+        self.date_from = QLineEdit()
+        self.date_from.setPlaceholderText("From YYYY-MM-DD")
+        self.date_to = QLineEdit()
+        self.date_to.setPlaceholderText("To YYYY-MM-DD")
         filters.addWidget(self.search, 1)
         filters.addWidget(self.kind_filter)
+        filters.addWidget(self.date_from)
+        filters.addWidget(self.date_to)
         layout.addLayout(filters)
 
         self.list = QListWidget()
         layout.addWidget(self.list, 1)
+        footer = QHBoxLayout()
+        self.filter_status = QLabel("Dates are inclusive. Leave blank for no date bound.")
+        self.filter_status.setObjectName("muted")
+        export = QPushButton("Export activity…")
+        footer.addWidget(self.filter_status, 1)
+        footer.addWidget(export)
+        layout.addLayout(footer)
         self.search.textChanged.connect(self.apply_filters)
         self.kind_filter.currentIndexChanged.connect(self.apply_filters)
+        self.date_from.textChanged.connect(self.apply_filters)
+        self.date_to.textChanged.connect(self.apply_filters)
+        export.clicked.connect(self.export_activity)
         self.apply_filters()
 
     def _description(self, event: dict) -> str:
@@ -367,20 +474,78 @@ class ActivityPanel(QWidget):
     def apply_filters(self, *_args) -> None:
         query = self.search.text().strip().casefold()
         selected_type = self.kind_filter.currentData()
+        start_date = self.date_from.text().strip()
+        end_date = self.date_to.text().strip()
+        try:
+            for value in (start_date, end_date):
+                if value:
+                    datetime.strptime(value, "%Y-%m-%d")
+            if start_date and end_date and start_date > end_date:
+                raise ValueError("Start date must not be after end date.")
+        except ValueError:
+            self.filter_status.setText("Enter valid dates (YYYY-MM-DD); start must not be after end.")
+            self.list.clear()
+            return
+        self.filter_status.setText("Dates are inclusive. Leave blank for no date bound.")
         self.list.clear()
         for event in self.events:
             event_type = str(event["event_type"])
             label = self.LABELS.get(event_type, event_type.replace(".", " ").title())
             detail = self._description(event)
             timestamp = str(event["created_at"])
+            event_date = timestamp[:10]
             searchable = f"{label} {detail} {timestamp}".casefold()
             if selected_type and event_type != selected_type:
                 continue
             if query and query not in searchable:
                 continue
+            if start_date and event_date < start_date:
+                continue
+            if end_date and event_date > end_date:
+                continue
             item = QListWidgetItem(f"{label}  ·  {timestamp}\n{detail}".rstrip())
             item.setData(Qt.ItemDataRole.UserRole, event)
             self.list.addItem(item)
+
+    def export_activity(self) -> None:
+        events = [
+            self.list.item(index).data(Qt.ItemDataRole.UserRole)
+            for index in range(self.list.count())
+        ]
+        if not events:
+            QMessageBox.information(self, "No activity", "There is no visible activity to export.")
+            return
+        filename, selected_filter = QFileDialog.getSaveFileName(
+            self, "Export filtered activity", "project-activity.json",
+            "JSON files (*.json);;Markdown files (*.md)",
+        )
+        if not filename:
+            return
+        path = Path(filename)
+        try:
+            if path.suffix.lower() == ".md" or "Markdown" in selected_filter:
+                lines = ["# Project activity", ""]
+                for event in events:
+                    event_type = str(event["event_type"])
+                    label = self.LABELS.get(event_type, event_type.replace(".", " ").title())
+                    lines.extend([
+                        f"## {label}", "",
+                        f"- When: {event['created_at']}",
+                        f"- Type: {event_type}",
+                        f"- Entity: {event.get('entity_type', '')}",
+                        f"- ID: {event.get('entity_id') or ''}",
+                        f"- Details: {self._description(event) or '—'}", "",
+                    ])
+                path = path.with_suffix(".md")
+                path.write_text("\n".join(lines), encoding="utf-8")
+            else:
+                path = path.with_suffix(".json")
+                path.write_text(
+                    json.dumps(events, ensure_ascii=False, indent=2), encoding="utf-8"
+                )
+            QMessageBox.information(self, "Activity exported", f"Saved {len(events)} event(s) to:\n{path}")
+        except OSError as exc:
+            QMessageBox.warning(self, "Could not export activity", str(exc))
 
 
 class ReadinessPanel(QWidget):
