@@ -452,7 +452,9 @@ class EntityPanel(QWidget):
             QMessageBox.warning(self, "Could not delete item", str(exc))
 
 class ActivityPanel(QWidget):
-    """Readable, searchable and type-filterable project activity stream."""
+    """Readable, searchable and type-filterable paginated project activity stream."""
+
+    PAGE_SIZE = 100
 
     LABELS = {
         "project.created": "Project created",
@@ -485,7 +487,8 @@ class ActivityPanel(QWidget):
         super().__init__()
         self.workspace = workspace
         self.project_id = project_id
-        self.events = workspace.intelligence.timeline(project_id, limit=500)
+        self.events = workspace.intelligence.timeline(project_id, limit=self.PAGE_SIZE)
+        self.has_more = len(self.events) == self.PAGE_SIZE
 
         layout = QVBoxLayout(self)
         filters = QHBoxLayout()
@@ -516,23 +519,35 @@ class ActivityPanel(QWidget):
         footer = QHBoxLayout()
         self.filter_status = QLabel("Dates are inclusive. Leave blank for no date bound.")
         self.filter_status.setObjectName("muted")
+        self.load_older = QPushButton("Load older activity")
+        self.load_older.setAccessibleName("Load older project activity")
         refresh = QPushButton("Refresh")
         export = QPushButton("Export activity…")
         footer.addWidget(self.filter_status, 1)
+        footer.addWidget(self.load_older)
         footer.addWidget(refresh)
         footer.addWidget(export)
         layout.addLayout(footer)
         refresh.clicked.connect(self.refresh_events)
+        self.load_older.clicked.connect(self.load_older_events)
         self.search.textChanged.connect(self.apply_filters)
         self.kind_filter.currentIndexChanged.connect(self.apply_filters)
         self.date_from.textChanged.connect(self.apply_filters)
         self.date_to.textChanged.connect(self.apply_filters)
         export.clicked.connect(self.export_activity)
+        self._update_pagination_controls()
         self.apply_filters()
+
+    def _update_pagination_controls(self) -> None:
+        self.load_older.setEnabled(self.has_more)
+        self.load_older.setText("Load older activity" if self.has_more else "All activity loaded")
 
     def refresh_events(self) -> None:
         selected_type = self.kind_filter.currentData()
-        self.events = self.workspace.intelligence.timeline(self.project_id, limit=500)
+        self.events = self.workspace.intelligence.timeline(
+            self.project_id, limit=self.PAGE_SIZE
+        )
+        self.has_more = len(self.events) == self.PAGE_SIZE
         self.kind_filter.blockSignals(True)
         self.kind_filter.clear()
         self.kind_filter.addItem("All activity", "")
@@ -543,6 +558,20 @@ class ActivityPanel(QWidget):
             if index >= 0:
                 self.kind_filter.setCurrentIndex(index)
         self.kind_filter.blockSignals(False)
+        self._update_pagination_controls()
+        self.apply_filters()
+
+    def load_older_events(self) -> None:
+        if not self.has_more or not self.events:
+            return
+        oldest = self.events[-1]
+        page = self.workspace.intelligence.timeline(
+            self.project_id, limit=self.PAGE_SIZE,
+            before=(str(oldest["created_at"]), str(oldest["event_id"])),
+        )
+        self.events.extend(page)
+        self.has_more = len(page) == self.PAGE_SIZE
+        self._update_pagination_controls()
         self.apply_filters()
 
     def _description(self, event: dict) -> str:
@@ -574,7 +603,9 @@ class ActivityPanel(QWidget):
             self.filter_status.setText("Enter valid dates (YYYY-MM-DD); start must not be after end.")
             self.list.clear()
             return
-        self.filter_status.setText("Dates are inclusive. Leave blank for no date bound.")
+        self.filter_status.setText(
+            f"Showing {len(self.events)} loaded events. Dates are inclusive; load older activity to search further back."
+        )
         self.list.clear()
         for event in self.events:
             event_type = str(event["event_type"])
