@@ -89,6 +89,8 @@ def test_workspace_export_preserves_context_intelligence_and_dependencies(tmp_pa
     payload = preview["project"]
 
     assert payload["name"] == "Exported project"
+    assert payload["handover_readiness"]["status"] == "incomplete"
+    assert payload["handover_readiness"]["score"] < 100
     assert len(payload["context_sections"]) == 6
     assert next(s for s in payload["context_sections"] if s["section_key"] == "goals")["content"] == "Ship the first release"
     assert len(payload["decisions"]) == 1
