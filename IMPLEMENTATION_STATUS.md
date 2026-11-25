@@ -1,6 +1,6 @@
 # Implementation Status
 
-**Release:** 0.5.0.dev0  
+**Release:** 0.5.1.dev0  
 **Status:** pre-alpha; not production-ready
 
 ## Implemented
@@ -18,6 +18,7 @@
 - [x] Bounded project activity timeline query.
 - [x] Initial PySide6 desktop shell with project navigation, context editor, intelligence tabs and activity timeline.
 - [x] Project metadata editing and audited project archiving from the desktop UI.
+- [x] Archived-project inspection and audited restoration from the desktop UI and CLI.
 - [x] Task prerequisite add/remove controls using cycle-safe application services.
 - [x] Human-readable activity labels with text search and event-type filtering.
 - [x] Structured desktop forms for decision, task, milestone and reference fields.
@@ -43,13 +44,13 @@
 ## Not yet implemented
 - [ ] Entity-specific soft-delete/restore policy and event retention/export policy.
 - [ ] Desktop design-system refinement, accessibility and keyboard interaction audit.
-- [ ] Archived-project restore UI.
+
 - [ ] Task dependency graph visualization.
 - [ ] Activity date-range filters and export.
 - [ ] Historical context revision-body export and configurable activity-history limits.
 - [ ] Import conflict resolution, merge/replace workflows and full source activity-history replay.
 - [ ] Broader secret coverage, configurable exclusions, and independent validation of secret-scan false positives/negatives.
-- [ ] Search, backup and recovery workflows.
+
 - [ ] Encryption, signatures and key management.
 - [ ] Local/cloud AI adapters and consent UI.
 - [ ] Windows, Linux and macOS installers.
