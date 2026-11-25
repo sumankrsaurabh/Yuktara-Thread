@@ -6,7 +6,7 @@ from yuktara_thread.application.workspace import WorkspaceService
 def test_workspace_migrates_and_creates_project(tmp_path: Path) -> None:
     workspace = WorkspaceService(tmp_path / "workspace.sqlite3")
     project = workspace.create_project("NovaUI", "Desktop UI framework")
-    assert workspace.schema_version == 2
+    assert workspace.schema_version == 3
     assert project.name == "NovaUI"
     assert len(workspace.get_context(project.project_id)) == 6
     initial = workspace.context.history(project.project_id, "goals")
