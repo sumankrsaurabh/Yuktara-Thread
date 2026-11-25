@@ -47,13 +47,16 @@ def export_workspace_project(
         )
     ]
     context_sections = workspace.get_context(project_id)
+    context_history = {
+        section.section_key: workspace.context.history(project_id, section.section_key)
+        for section in context_sections
+    }
+    if any(len(revisions) > 1000 for revisions in context_history.values()):
+        raise ValueError("A context section exceeds the 1,000-revision handover limit")
     payload: dict[str, Any] = {
         **asdict(project),
         "context_sections": [asdict(section) for section in context_sections],
-        "context_history": {
-            section.section_key: workspace.context.history(project_id, section.section_key)
-            for section in context_sections
-        },
+        "context_history": context_history,
         **{f"{kind}s": values for kind, values in records.items()},
         "task_dependencies": dependencies,
         "activity_events": workspace.intelligence.timeline(project_id, limit=1000),
