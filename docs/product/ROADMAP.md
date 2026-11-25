@@ -16,7 +16,8 @@
 - [x] Create/list/update/delete lifecycle.
 - [x] Transactional activity events for project, context and intelligence mutations.
 - [x] Task dependency graph with cycle prevention.
-- [ ] Entity soft-delete/restore and event retention/export policy.
+- [x] Entity soft-delete/restore with audited lifecycle events.
+- [ ] Retention/purge policy and event export.
 - [x] Bounded local search across project summaries, context and intelligence records.
 - [x] Consistent SQLite backup and validated restore into a new workspace database.
 - [ ] Advanced recovery, restore points and search filters.
