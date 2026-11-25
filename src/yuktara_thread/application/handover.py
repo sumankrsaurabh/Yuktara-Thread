@@ -71,15 +71,32 @@ def list_incomplete_workspace_imports(workspace: WorkspaceService) -> list[dict[
     return [dict(row) for row in rows]
 
 
-def reconcile_workspace_imports(workspace: WorkspaceService) -> list[dict[str, Any]]:
-    """Reconcile durable import states without deleting files or project data.
+def reconcile_workspace_imports(
+    workspace: WorkspaceService, *, stale_after_seconds: int = 300,
+) -> list[dict[str, Any]]:
+    """Reconcile stale import states without deleting files or project data.
 
+    Recent entries are skipped so a recovery command cannot race a live import.
     A committed project and its extracted directory can be safely finalized.
-    Any mismatch is retained as recovery_required for explicit operator review.
+    Any stale mismatch is retained as recovery_required for operator review.
     """
+    if (
+        not isinstance(stale_after_seconds, int) or isinstance(stale_after_seconds, bool)
+        or stale_after_seconds < 0
+    ):
+        raise ValueError("stale_after_seconds must be a non-negative integer")
     entries = list_incomplete_workspace_imports(workspace)
     reconciled: list[dict[str, Any]] = []
+    now = datetime.now(timezone.utc)
     for entry in entries:
+        try:
+            updated_at = datetime.fromisoformat(entry["updated_at"].replace("Z", "+00:00"))
+            if updated_at.tzinfo is None:
+                updated_at = updated_at.replace(tzinfo=timezone.utc)
+        except (TypeError, ValueError):
+            continue
+        if (now - updated_at).total_seconds() < stale_after_seconds:
+            continue
         destination = Path(entry["destination_path"])
         files_present = destination.is_dir() and not destination.is_symlink()
         with workspace.database.read() as connection:
