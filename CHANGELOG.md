@@ -14,8 +14,6 @@ All notable changes to Yuktara Thread are documented here. Development versions 
 - Conflict detection is advisory and based on project identity/name and exact normalized record titles; it does not perform semantic matching or merge records.
 
 
-All notable changes to Yuktara Thread are documented here. Development versions may change before a stable release.
-
 ## 0.6.2.dev0 — 2026-11-25
 
 ### Added
