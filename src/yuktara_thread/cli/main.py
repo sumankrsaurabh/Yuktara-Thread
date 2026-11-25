@@ -27,6 +27,10 @@ def build_parser() -> argparse.ArgumentParser:
     workspace.add_argument("action", choices=["init"])
     workspace.add_argument("--database", required=True, type=Path)
 
+    desktop = commands.add_parser("desktop", help="Open the native desktop workspace")
+    desktop.add_argument("--database", required=True, type=Path,
+                         help="Path to the local SQLite workspace database")
+
     project = commands.add_parser("project", help="Manage local workspace projects")
     project_actions = project.add_subparsers(dest="project_action", required=True)
     project_create = project_actions.add_parser("create", help="Create a project")
@@ -58,6 +62,9 @@ def main(argv: list[str] | None = None) -> int:
             print(json.dumps({"initialized": True, "schema_version": workspace.schema_version,
                               "database": str(args.database)}, indent=2))
             return 0
+        if args.command == "desktop":
+            from yuktara_thread.ui.app import run as run_desktop
+            return run_desktop(args.database)
         if args.command == "project":
             workspace = WorkspaceService(args.database)
             if args.project_action == "create":
