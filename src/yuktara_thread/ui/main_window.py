@@ -212,6 +212,7 @@ class MainWindow(QMainWindow):
         side_layout.addWidget(QLabel(f"Database: {database_path.name}"))
 
         self.pages = QStackedWidget()
+        self.project_page = None
         self.empty = QWidget()
         empty_layout = QVBoxLayout(self.empty)
         empty_layout.addStretch(1)
@@ -268,6 +269,9 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self, "Project unavailable", "This project could not be found.")
             self.refresh_projects()
             return
-        page = ProjectPage(self.workspace, project)
-        self.pages.addWidget(page)
-        self.pages.setCurrentWidget(page)
+        if self.project_page is not None:
+            self.pages.removeWidget(self.project_page)
+            self.project_page.deleteLater()
+        self.project_page = ProjectPage(self.workspace, project)
+        self.pages.addWidget(self.project_page)
+        self.pages.setCurrentWidget(self.project_page)
