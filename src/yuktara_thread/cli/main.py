@@ -5,6 +5,7 @@ import json
 import sys
 from pathlib import Path
 
+from yuktara_thread.application.backup import backup_workspace, restore_workspace
 from yuktara_thread.application.handover import export_workspace_project, import_workspace_project
 from yuktara_thread.application.workspace import WorkspaceService
 from yuktara_thread.application.secret_scan import scan_selected_files
@@ -34,9 +35,14 @@ def build_parser() -> argparse.ArgumentParser:
     package_import.add_argument("package", type=Path)
     package_import.add_argument("--destination", required=True, type=Path)
 
-    workspace = commands.add_parser("workspace", help="Initialize a local workspace")
-    workspace.add_argument("action", choices=["init"])
-    workspace.add_argument("--database", required=True, type=Path)
+    workspace = commands.add_parser("workspace", help="Initialize, back up or restore a local workspace")
+    workspace.add_argument("action", choices=["init", "backup", "restore"])
+    workspace.add_argument("--database", required=True, type=Path,
+                           help="Workspace database path; for restore, this must be a new destination")
+    workspace.add_argument("--output", type=Path,
+                           help="New backup file path (required for backup)")
+    workspace.add_argument("--backup", type=Path,
+                           help="Existing backup file path (required for restore)")
 
     desktop = commands.add_parser("desktop", help="Open the native desktop workspace")
     desktop.add_argument("--database", required=True, type=Path,
@@ -90,10 +96,25 @@ def main(argv: list[str] | None = None) -> int:
             print(json.dumps({"imported": True, "destination": str(destination)}, indent=2))
             return 0
         if args.command == "workspace":
-            workspace = WorkspaceService(args.database)
-            print(json.dumps({"initialized": True, "schema_version": workspace.schema_version,
-                              "database": str(args.database)}, indent=2))
-            return 0
+            if args.action == "init":
+                workspace = WorkspaceService(args.database)
+                print(json.dumps({"initialized": True, "schema_version": workspace.schema_version,
+                                  "database": str(args.database)}, indent=2))
+                return 0
+            if args.action == "backup":
+                if args.output is None:
+                    raise ValueError("workspace backup requires --output")
+                backup = backup_workspace(args.database, args.output)
+                print(json.dumps({"backed_up": True, "database": str(args.database),
+                                  "backup": str(backup)}, indent=2))
+                return 0
+            if args.action == "restore":
+                if args.backup is None:
+                    raise ValueError("workspace restore requires --backup")
+                restored = restore_workspace(args.backup, args.database)
+                print(json.dumps({"restored": True, "backup": str(args.backup),
+                                  "database": str(restored)}, indent=2))
+                return 0
         if args.command == "desktop":
             from yuktara_thread.ui.app import run as run_desktop
             return run_desktop(args.database)
