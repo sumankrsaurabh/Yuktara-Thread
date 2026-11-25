@@ -69,6 +69,7 @@ Initialize a database with `thread workspace init --database ./workspace.sqlite3
 - `src/yuktara_thread/infrastructure/database`: SQLite connection, migrations and repositories.
 - `src/yuktara_thread/infrastructure/package.py`: package serialization and verification.
 - [Portable package format v1](docs/architecture/PACKAGE_FORMAT.md): archive layout, metadata schema, limits and import behavior.
+- [Portable desktop builds](docs/release/PORTABLE_BUILDS.md): build artifacts, launch instructions and signing limitations.
 - `src/yuktara_thread/cli`: command-line interface.
 - `src/yuktara_thread/ui`: optional PySide6 presentation layer.
 - `tests`: automated tests.
