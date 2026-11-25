@@ -5,6 +5,7 @@ from dataclasses import asdict
 from datetime import datetime, timezone
 from pathlib import Path
 import shutil
+import sqlite3
 from typing import Any
 from uuid import uuid4
 
@@ -195,8 +196,10 @@ def import_workspace_project(
         confirmed_preview = preview_package(package_file)
         if confirmed_preview["manifest_sha256"] != preview["manifest_sha256"]:
             raise PackageError("Package changed during workspace import")
-    except Exception:
+    except Exception as exc:
         shutil.rmtree(extracted, ignore_errors=True)
+        if isinstance(exc, sqlite3.Error):
+            raise RuntimeError(f"Workspace database import failed: {exc}") from exc
         raise
     project_id = str(uuid4())
     now = datetime.now(timezone.utc).isoformat()
