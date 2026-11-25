@@ -32,3 +32,35 @@ def test_handover_report_handles_empty_package() -> None:
 
     assert "# Handover: Unnamed project" in report
     assert "- No files included." in report
+
+
+def test_report_includes_decision_task_and_dependency_details() -> None:
+    report = render_handover_report({
+        "format": "yuktara.thread",
+        "format_version": 1,
+        "project": {
+            "name": "Implementation",
+            "summary": "Deliver the storage layer.",
+            "decisions": [{
+                "title": "Choose SQLite", "problem": "Local persistence",
+                "selected_option": "SQLite", "rationale": "Transactional",
+                "alternatives": ["JSON"], "consequences": "Single local database",
+                "status": "accepted",
+            }],
+            "tasks": [
+                {"task_id": "a", "title": "Design schema", "status": "completed", "priority": "high"},
+                {"task_id": "b", "title": "Build repository", "status": "open", "priority": "normal"},
+            ],
+            "task_dependencies": [{"task_id": "b", "depends_on_task_id": "a"}],
+            "milestones": [{"title": "MVP", "status": "planned"}],
+            "references": [{"title": "Design notes", "reference_type": "document", "uri": "docs/design.md"}],
+        },
+        "files": [],
+    })
+
+    assert "## Decisions" in report
+    assert "Rationale: Transactional" in report
+    assert "## Tasks" in report
+    assert "Build repository depends on Design schema" in report
+    assert "## Milestones" in report
+    assert "## References" in report
