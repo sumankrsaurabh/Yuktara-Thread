@@ -113,3 +113,16 @@ def test_project_and_context_changes_appear_in_timeline(workspace):
     assert {"project.created", "project.updated", "context.updated"} <= event_types
     context_event = next(event for event in events if event["event_type"] == "context.updated")
     assert context_event["payload"]["revision"] == 2
+
+
+def test_task_dependency_removal_is_audited(workspace):
+    service, project = workspace
+    repo = service.intelligence
+    task = repo.create_task(project.project_id, title="Parent")
+    dependent = repo.create_task(project.project_id, title="Child")
+    repo.add_task_dependency(project.project_id, dependent["task_id"], task["task_id"])
+    repo.remove_task_dependency(project.project_id, dependent["task_id"], task["task_id"])
+    assert repo.list_task_dependencies(dependent["task_id"]) == []
+    assert "task.dependency_removed" in {
+        event["event_type"] for event in repo.timeline(project.project_id)
+    }
