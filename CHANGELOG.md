@@ -1,11 +1,12 @@
 # Changelog
 
-## 0.4.0.dev0 — Workspace-aware handover
+## 0.4.0.dev0 — Workspace-aware handover and privacy review
 
 - Export complete workspace context, decisions, tasks, milestones, references, task prerequisites and recent activity metadata into `.thread` packages.
 - Restore verified handovers into a new local workspace with fresh IDs and dependency remapping.
 - Add desktop package preview, workspace import and Markdown handover report export.
 - Add deterministic AI-free readiness checks in the project overview and handover report.
+- Add local heuristic secret scanning before CLI and desktop handover export, with explicit acknowledgement when possible credentials are detected.
 - Harden package creation with strict JSON metadata, isolated temporary files and post-write verification.
 - Add import validation and transactional database restoration.
 
