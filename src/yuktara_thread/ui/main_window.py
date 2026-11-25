@@ -713,6 +713,62 @@ class PackagePreviewDialog(QDialog):
             QMessageBox.warning(self, "Could not extract package", str(exc))
 
 
+class ArchivedProjectsDialog(QDialog):
+    """Inspect archived projects and restore them to the active workspace."""
+
+    def __init__(self, workspace: WorkspaceService, on_restored=None, parent=None) -> None:
+        super().__init__(parent)
+        self.workspace = workspace
+        self.on_restored = on_restored
+        self.setWindowTitle("Archived projects")
+        self.setMinimumSize(480, 360)
+        layout = QVBoxLayout(self)
+        self.projects = QListWidget()
+        self.projects.itemDoubleClicked.connect(lambda _item: self.restore_selected())
+        layout.addWidget(self.projects, 1)
+        self.status = QLabel("Archived projects are retained until you restore them.")
+        self.status.setObjectName("muted")
+        layout.addWidget(self.status)
+        actions = QHBoxLayout()
+        actions.addStretch(1)
+        close = QPushButton("Close")
+        restore = QPushButton("Restore project")
+        restore.setObjectName("primary")
+        close.clicked.connect(self.reject)
+        restore.clicked.connect(self.restore_selected)
+        actions.addWidget(close)
+        actions.addWidget(restore)
+        layout.addLayout(actions)
+        self.refresh()
+
+    def refresh(self) -> None:
+        self.projects.clear()
+        archived = self.workspace.list_projects(include_archived=True)
+        for project in archived:
+            if project.status != "archived":
+                continue
+            item = QListWidgetItem(f"{project.name}  ·  {project.archived_at or 'Archived'}")
+            item.setData(Qt.ItemDataRole.UserRole, project.project_id)
+            self.projects.addItem(item)
+        self.status.setText(
+            f"{self.projects.count()} archived project(s). Restoring preserves their existing data and activity history."
+            if self.projects.count() else "There are no archived projects."
+        )
+
+    def restore_selected(self) -> None:
+        item = self.projects.currentItem()
+        if item is None:
+            return
+        project_id = str(item.data(Qt.ItemDataRole.UserRole))
+        try:
+            project = self.workspace.restore_project(project_id)
+            self.refresh()
+            if self.on_restored is not None:
+                self.on_restored(project.project_id)
+        except (ValueError, LookupError, RuntimeError) as exc:
+            QMessageBox.warning(self, "Could not restore project", str(exc))
+
+
 class MainWindow(QMainWindow):
     def __init__(self, database_path: Path) -> None:
         super().__init__()
@@ -738,6 +794,8 @@ class MainWindow(QMainWindow):
         search_button = QPushButton("Search workspace…")
         side_layout.addWidget(search_button)
         side_layout.addWidget(QLabel("WORKSPACE"))
+        archived_button = QPushButton("Archived projects…")
+        side_layout.addWidget(archived_button)
         self.projects = QListWidget()
         side_layout.addWidget(self.projects, 1)
         create = QPushButton("＋  New project")
@@ -774,6 +832,7 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(root)
 
         create.clicked.connect(self.create_project)
+        archived_button.clicked.connect(self.open_archived_projects)
         search_button.clicked.connect(self.open_search_dialog)
         create_handover.clicked.connect(self.create_handover_package)
         backup_button.clicked.connect(self.backup_current_workspace)
@@ -796,6 +855,12 @@ class MainWindow(QMainWindow):
 
     def open_search_dialog(self) -> None:
         dialog = SearchDialog(self.workspace, on_open=self.refresh_projects, parent=self)
+        dialog.exec()
+
+    def open_archived_projects(self) -> None:
+        dialog = ArchivedProjectsDialog(
+            self.workspace, on_restored=self.refresh_projects, parent=self
+        )
         dialog.exec()
 
     def backup_current_workspace(self) -> None:
