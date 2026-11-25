@@ -122,10 +122,15 @@ def import_workspace_project(
             fields = workspace.intelligence.FIELDS[kind]
             _, id_column = workspace.intelligence.TABLES[kind]
             allowed_record_keys = fields | {
-                id_column, "project_id", "created_at", "updated_at",
+                id_column, "project_id", "created_at", "updated_at", "deleted_at",
             }
             if set(record) - allowed_record_keys:
                 raise ValueError(f"{kind.title()} record contains unsupported fields")
+            # Active handovers must never silently resurrect a record that was
+            # deleted in the source workspace. Export currently includes only
+            # active records; reject crafted or stale packages that say otherwise.
+            if record.get("deleted_at") is not None:
+                raise ValueError(f"Deleted {kind} records cannot be imported")
             values = {key: record[key] for key in fields if key in record}
             if not isinstance(values.get("title"), str) or not values["title"].strip():
                 raise ValueError(f"Every {kind} must have a title")
