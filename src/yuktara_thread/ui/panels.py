@@ -602,9 +602,13 @@ class ActivityPanel(QWidget):
                 for event in events:
                     event_type = str(event["event_type"])
                     label = self.LABELS.get(event_type, event_type.replace(".", " ").title())
+                    imported = (event.get("payload") or {}).get("_origin") == "imported"
+                    if imported:
+                        label += " · imported"
                     lines.extend([
                         f"## {label}", "",
                         f"- When: {event['created_at']}",
+                        f"- Origin: {'Imported (unverified)' if imported else 'Local workspace'}",
                         f"- Type: {event_type}",
                         f"- Entity: {event.get('entity_type', '')}",
                         f"- ID: {event.get('entity_id') or ''}",
