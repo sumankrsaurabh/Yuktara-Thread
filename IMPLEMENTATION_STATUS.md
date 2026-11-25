@@ -15,8 +15,11 @@
 - [x] Task prerequisite relationships with cross-project, self-link and cycle rejection, plus audited edge removal.
 - [x] Bounded project activity timeline query.
 - [x] Initial PySide6 desktop shell with project navigation, context editor, intelligence tabs and activity timeline.
+- [x] Project metadata editing and audited project archiving from the desktop UI.
+- [x] Task prerequisite add/remove controls using cycle-safe application services.
+- [x] Human-readable activity labels with text search and event-type filtering.
 - [x] Structured desktop forms for decision, task, milestone and reference fields.
-- [x] Offscreen Qt smoke tests and a dedicated Linux desktop CI job (runtime verification pending latest workflow result).
+- [x] Offscreen Qt smoke tests and a dedicated Linux desktop CI job (runtime verification pending latest workflow result; Qt runtime currently constrained to the 6.9 series while investigating a Qt 6.12 offscreen shutdown crash).
 - [x] Automated core tests and GitHub Actions Python 3.11–3.13 matrix.
 
 ## Not yet implemented
