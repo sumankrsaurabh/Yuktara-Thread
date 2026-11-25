@@ -1,30 +1,26 @@
 # Implementation Status
 
-**Release:** 0.2.0-dev  
+**Release:** 0.3.0-dev  
 **Status:** pre-alpha; not production-ready
 
 ## Implemented
 - [x] Python package skeleton and CLI.
-- [x] Project context data model.
-- [x] ZIP-based package writer and versioned JSON manifest.
-- [x] SHA-256 integrity verification and archive resource checks.
-- [x] SQLite connection and transaction boundary.
-- [x] Ordered transactional schema migration runner (schema v1).
-- [x] Project create/get/list/update/archive repository.
-- [x] Six structured context sections per project.
-- [x] Append-only context revision snapshots.
-- [x] Optimistic concurrency checks for context editing.
-- [x] Application-level WorkspaceService.
-- [x] CLI commands for workspace initialization and project create/list/archive.
-- [x] Initial package and workspace tests.
-- [x] GitHub Actions test matrix for Python 3.11–3.13.
+- [x] Versioned ZIP package writer and SHA-256 integrity verifier.
+- [x] SQLite workspace with ordered transactional migrations (schema v1–v2).
+- [x] Project create/get/list/update/archive.
+- [x] Six structured context sections with append-only revision snapshots and optimistic concurrency.
+- [x] Decision, task, milestone and reference creation/listing repositories.
+- [x] Append-only project event records for intelligence entity creation and task dependency changes.
+- [x] Task prerequisite relationships with cross-project, self-link and cycle rejection.
+- [x] Bounded project activity timeline query.
+- [x] Automated tests and GitHub Actions Python 3.11–3.13 matrix.
 
 ## Not yet implemented
+- [ ] Full update/delete lifecycle and event coverage for every entity.
+- [ ] Project/context mutations integrated into the event stream.
 - [ ] Desktop UI and design system.
-- [ ] Project event stream and audit timeline.
-- [ ] Decisions, tasks, milestones and references.
 - [ ] Package preview and safe transactional import.
-- [ ] Human-readable handover report generation.
+- [ ] Human-readable handover report and readiness scoring.
 - [ ] Search, backup and recovery workflows.
 - [ ] Encryption, signatures and key management.
 - [ ] Local/cloud AI adapters and consent UI.
@@ -32,4 +28,4 @@
 - [ ] Independent security review and release qualification.
 
 ## Verification
-GitHub Actions is configured to run tests on Python 3.11, 3.12 and 3.13. Check the Actions tab for the latest run result. Do not treat an in-progress or failed run as a passing test report.
+GitHub Actions runs tests on Python 3.11, 3.12 and 3.13. Check the Actions tab for the latest commit's result. Do not treat an in-progress or failed run as a passing test report.
