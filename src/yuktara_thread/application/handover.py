@@ -43,6 +43,77 @@ def _remove_import_files(path: Path) -> bool:
     return not path.exists() and not path.is_symlink()
 
 
+def _update_import_journal(
+    workspace: WorkspaceService, import_id: str, *, status: str,
+    phase: str, error: str | None = None,
+) -> None:
+    """Persist an import state transition independently of project data."""
+    now = datetime.now(timezone.utc).isoformat()
+    with workspace.database.transaction() as connection:
+        cursor = connection.execute(
+            """UPDATE handover_imports
+               SET status = ?, phase = ?, error = ?, updated_at = ?
+               WHERE import_id = ?""",
+            (status, phase, error, now, import_id),
+        )
+        if cursor.rowcount != 1:
+            raise RuntimeError("Handover import journal entry disappeared")
+
+
+def list_incomplete_workspace_imports(workspace: WorkspaceService) -> list[dict[str, Any]]:
+    """Return imports that need reconciliation or operator attention."""
+    with workspace.database.read() as connection:
+        rows = connection.execute(
+            """SELECT * FROM handover_imports
+               WHERE status NOT IN ('completed', 'failed')
+               ORDER BY created_at, import_id"""
+        ).fetchall()
+    return [dict(row) for row in rows]
+
+
+def reconcile_workspace_imports(workspace: WorkspaceService) -> list[dict[str, Any]]:
+    """Reconcile durable import states without deleting files or project data.
+
+    A committed project and its extracted directory can be safely finalized.
+    Any mismatch is retained as recovery_required for explicit operator review.
+    """
+    entries = list_incomplete_workspace_imports(workspace)
+    reconciled: list[dict[str, Any]] = []
+    for entry in entries:
+        destination = Path(entry["destination_path"])
+        files_present = destination.is_dir() and not destination.is_symlink()
+        with workspace.database.read() as connection:
+            project = connection.execute(
+                "SELECT 1 FROM projects WHERE project_id = ?",
+                (entry["project_id"],),
+            ).fetchone()
+        project_present = project is not None
+        if project_present and files_present:
+            status = "completed"
+            error = None
+            phase = "startup_reconciliation"
+        elif not project_present and not files_present:
+            status = "failed"
+            error = "Import was interrupted before a project or published files were committed."
+            phase = "startup_reconciliation"
+        else:
+            status = "recovery_required"
+            error = (
+                "Project and extracted files are inconsistent. No data was deleted; "
+                "inspect the project and destination before retrying."
+            )
+            phase = "startup_reconciliation"
+        _update_import_journal(
+            workspace, entry["import_id"], status=status,
+            phase=phase, error=error,
+        )
+        reconciled.append({
+            **entry, "status": status, "phase": phase, "error": error,
+            "project_present": project_present, "files_present": files_present,
+        })
+    return reconciled
+
+
 def export_workspace_project(
     workspace: WorkspaceService,
     project_id: str,
@@ -437,13 +508,41 @@ def import_workspace_project(
             "payload": payload, "created_at": created_at,
         })
 
+    import_id = str(uuid4())
+    project_id = str(uuid4())
+    now = datetime.now(timezone.utc).isoformat()
+    destination_path = files_destination.expanduser().absolute()
+    with workspace.database.transaction() as connection:
+        connection.execute(
+            """INSERT INTO handover_imports
+               (import_id, project_id, package_manifest_sha256, destination_path,
+                status, phase, error, created_at, updated_at)
+               VALUES (?, ?, ?, ?, 'started', 'journal_created', NULL, ?, ?)""",
+            (
+                import_id, project_id, preview["manifest_sha256"],
+                str(destination_path), now, now,
+            ),
+        )
+
     phase = "file_extraction"
     try:
+        _update_import_journal(
+            workspace, import_id, status="extracting", phase=phase,
+        )
         extracted = import_package(package_file, files_destination)
     except Exception as exc:
-        raise WorkspaceImportError(
-            str(exc), phase=phase,
-        ) from exc
+        try:
+            _update_import_journal(
+                workspace, import_id, status="failed", phase=phase, error=str(exc),
+            )
+        except Exception:
+            pass
+        raise WorkspaceImportError(str(exc), phase=phase) from exc
+
+    phase = "files_ready"
+    _update_import_journal(
+        workspace, import_id, status="files_ready", phase=phase,
+    )
 
     phase = "post_extraction_verification"
     try:
@@ -452,13 +551,19 @@ def import_workspace_project(
             raise PackageError("Package changed during workspace import")
     except Exception as exc:
         cleanup_ok = _remove_import_files(extracted)
+        try:
+            _update_import_journal(
+                workspace, import_id,
+                status="failed" if cleanup_ok else "recovery_required",
+                phase=phase, error=str(exc),
+            )
+        except Exception:
+            pass
         raise WorkspaceImportError(
             str(exc), phase=phase,
             recovery_path=None if cleanup_ok else extracted,
         ) from exc
 
-    project_id = str(uuid4())
-    now = datetime.now(timezone.utc).isoformat()
     phase = "database_transaction"
     try:
         with workspace.database.transaction() as connection:
@@ -557,6 +662,22 @@ def import_workspace_project(
                 },
                 created_at=now,
             )
+            connection.execute(
+                """UPDATE handover_imports
+                   SET status = 'database_committed', phase = 'database_committed',
+                       error = NULL, updated_at = ?
+                   WHERE import_id = ?""",
+                (now, import_id),
+            )
+        try:
+            _update_import_journal(
+                workspace, import_id, status="completed",
+                phase="completed",
+            )
+        except Exception:
+            # The project and journal's database_committed transition share
+            # one transaction; startup reconciliation can finalize this state.
+            pass
         project = Project(
             project_id=project_id, name=clean_name, summary=summary.strip(),
             status="active", created_at=now, updated_at=now, archived_at=None,
@@ -568,6 +689,14 @@ def import_workspace_project(
             f"Workspace database import failed: {exc}"
             if isinstance(exc, sqlite3.Error) else str(exc)
         )
+        try:
+            _update_import_journal(
+                workspace, import_id,
+                status="failed" if cleanup_ok else "recovery_required",
+                phase=phase, error=message,
+            )
+        except Exception:
+            pass
         raise WorkspaceImportError(
             message, phase=phase,
             recovery_path=None if cleanup_ok else extracted,
