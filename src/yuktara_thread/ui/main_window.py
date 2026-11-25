@@ -295,6 +295,88 @@ class EntityPanel(QWidget):
             QMessageBox.warning(self, "Could not delete item", str(exc))
 
 
+class ActivityPanel(QWidget):
+    """Readable, searchable and type-filterable project activity stream."""
+
+    LABELS = {
+        "project.created": "Project created",
+        "project.updated": "Project details updated",
+        "project.archived": "Project archived",
+        "context.updated": "Context updated",
+        "decision.created": "Decision added",
+        "decision.updated": "Decision updated",
+        "decision.deleted": "Decision deleted",
+        "task.created": "Task added",
+        "task.updated": "Task updated",
+        "task.deleted": "Task deleted",
+        "task.dependency_added": "Task prerequisite added",
+        "task.dependency_removed": "Task prerequisite removed",
+        "milestone.created": "Milestone added",
+        "milestone.updated": "Milestone updated",
+        "milestone.deleted": "Milestone deleted",
+        "reference.created": "Reference added",
+        "reference.updated": "Reference updated",
+        "reference.deleted": "Reference deleted",
+    }
+
+    def __init__(self, workspace: WorkspaceService, project_id: str) -> None:
+        super().__init__()
+        self.workspace = workspace
+        self.project_id = project_id
+        self.events = workspace.intelligence.timeline(project_id, limit=500)
+
+        layout = QVBoxLayout(self)
+        filters = QHBoxLayout()
+        self.search = QLineEdit()
+        self.search.setPlaceholderText("Search activity...")
+        self.kind_filter = QComboBox()
+        self.kind_filter.addItem("All activity", "")
+        event_types = sorted({str(event["event_type"]) for event in self.events})
+        for event_type in event_types:
+            self.kind_filter.addItem(self.LABELS.get(event_type, event_type), event_type)
+        filters.addWidget(self.search, 1)
+        filters.addWidget(self.kind_filter)
+        layout.addLayout(filters)
+
+        self.list = QListWidget()
+        layout.addWidget(self.list, 1)
+        self.search.textChanged.connect(self.apply_filters)
+        self.kind_filter.currentIndexChanged.connect(self.apply_filters)
+        self.apply_filters()
+
+    def _description(self, event: dict) -> str:
+        payload = event.get("payload") or {}
+        if "title" in payload:
+            return str(payload["title"])
+        if "section_key" in payload:
+            return f"Section: {payload['section_key']}"
+        if "depends_on_task_id" in payload:
+            return "A task prerequisite relationship changed"
+        if "changed_fields" in payload:
+            return "Updated: " + ", ".join(payload["changed_fields"])
+        if payload.get("summary_changed"):
+            return "Project summary changed"
+        return ""
+
+    def apply_filters(self, *_args) -> None:
+        query = self.search.text().strip().casefold()
+        selected_type = self.kind_filter.currentData()
+        self.list.clear()
+        for event in self.events:
+            event_type = str(event["event_type"])
+            label = self.LABELS.get(event_type, event_type.replace(".", " ").title())
+            detail = self._description(event)
+            timestamp = str(event["created_at"])
+            searchable = f"{label} {detail} {timestamp}".casefold()
+            if selected_type and event_type != selected_type:
+                continue
+            if query and query not in searchable:
+                continue
+            item = QListWidgetItem(f"{label}  ·  {timestamp}\\n{detail}".rstrip())
+            item.setData(Qt.ItemDataRole.UserRole, event)
+            self.list.addItem(item)
+
+
 class ProjectPage(QWidget):
     def __init__(self, workspace: WorkspaceService, project, *,
                  on_edit=None, on_archive=None) -> None:
@@ -338,14 +420,7 @@ class ProjectPage(QWidget):
         ):
             tabs.addTab(EntityPanel(workspace, project.project_id, kind), label)
 
-        activity = QWidget()
-        activity_layout = QVBoxLayout(activity)
-        events = QListWidget()
-        for event in workspace.intelligence.timeline(project.project_id, limit=250):
-            payload = json.dumps(event["payload"], ensure_ascii=False, sort_keys=True)
-            events.addItem(f"{event['created_at']}  ·  {event['event_type']}  ·  {payload}")
-        activity_layout.addWidget(events)
-        tabs.addTab(activity, "Activity")
+        tabs.addTab(ActivityPanel(workspace, project.project_id), "Activity")
 
 
 class MainWindow(QMainWindow):
