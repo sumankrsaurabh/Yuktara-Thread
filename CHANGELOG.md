@@ -1,5 +1,37 @@
 # Changelog
 
+All notable changes to Yuktara Thread are documented here. Development versions may change before a stable release.
+
+## 0.6.0.dev0 — 2026-11-25
+
+### Added
+- Context revision history inspection and restore-as-new-revision in the desktop application.
+- Context revision-body preservation across .thread handover export and import.
+- Validated source activity-history replay, with imported/unverified provenance metadata.
+- Desktop recovery dialog for soft-deleted decisions, tasks, milestones and references.
+- Explicit age-based retention purge with dry-run by default, confirmation required and a permanent audit event.
+- Activity text, event-type and inclusive date-range filtering; JSON and Markdown export.
+- Activity refresh control to load events created after the panel was opened.
+- Read-only layered task dependency map.
+- First-run workspace selection for desktop launches without an explicit database argument.
+- Portable PyInstaller bundle workflows for Windows, macOS and Linux, with SHA-256 checksum artifacts.
+- Cross-platform desktop smoke-test matrix and wheel/source-distribution validation.
+- Modular desktop source layout and software architecture/release qualification documentation.
+
+### Fixed
+- Handover import accepts nullable soft-delete metadata without importing deleted records.
+- Soft-deleted records cannot be edited until restored.
+- Task dependency creation requires an active project and active task records.
+- Retention purge avoids SQLite bind-parameter limits for large eligible sets.
+- Handover export bounds context history and import validates revision continuity and activity metadata.
+
+### Limitations
+- Pre-alpha; not production-ready.
+- Portable bundles are unsigned. Signed installers and interactive manual QA are not complete.
+- Packages and workspace backups are not encrypted or publisher-authenticated.
+- Secret scanning is heuristic and not a DLP or malware scanner.
+- Optional local/cloud AI adapters, import merge workflows and independent security review remain pending.
+
 ## 0.5.0.dev0 — Privacy, recovery and search foundation
 
 - Add local heuristic secret review before CLI and desktop handover export, with explicit acknowledgement when findings exist.
@@ -9,7 +41,7 @@
 
 ## 0.4.0.dev0 — Workspace-aware handover and privacy review
 
-- Export complete workspace context, decisions, tasks, milestones, references, task prerequisites and recent activity metadata into `.thread` packages.
+- Export complete workspace context, decisions, tasks, milestones, references, task prerequisites and recent activity metadata into .thread packages.
 - Restore verified handovers into a new local workspace with fresh IDs and dependency remapping.
 - Add desktop package preview, workspace import and Markdown handover report export.
 - Add deterministic AI-free readiness checks in the project overview and handover report.
