@@ -35,7 +35,7 @@
 - [x] Archived-project restore UI and audited application/CLI restoration.
 - [x] Read-only layered task dependency graph visualization.
 - [x] Activity date-range filters and JSON/Markdown export.
-- [ ] Desktop design-system refinement and accessibility.
+- [x] Split desktop presentation into context, panels, dialogs, pages and main-window modules.\n- [ ] Accessibility and keyboard interaction audit.
 - [x] Workspace-aware package export/import for context, decisions, tasks, milestones, references and task dependencies.
 - [x] Markdown handover report and recipient-side import workflow.
 - [x] Historical context revision-body export/import and desktop revision restore.\n- [x] Replay bounded source activity history on import with imported-origin metadata.
@@ -43,7 +43,7 @@
 - [x] Deterministic handover readiness checks and report indicator.
 - [x] Secret inclusion warnings and inclusion review.
 - [ ] Windows/Linux/macOS installer packaging and interactive platform QA.
-- [x] Cross-platform CI smoke-test matrix and Python wheel/sdist build validation.
+- [x] Cross-platform CI smoke-test matrix, PyInstaller bundle builds and Python wheel/sdist validation.
 
 ## P4 — Optional intelligence and collaboration
 - [ ] Local AI provider adapters.
