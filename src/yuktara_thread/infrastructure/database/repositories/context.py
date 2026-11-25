@@ -5,6 +5,7 @@ from uuid import uuid4
 
 from yuktara_thread.domain.context.models import CONTEXT_TITLES, ContextSection
 from yuktara_thread.infrastructure.database.connection import Database
+from yuktara_thread.infrastructure.database.repositories.events import append_project_event
 
 
 def _now() -> str:
@@ -85,6 +86,9 @@ class ContextRepository:
                    VALUES (?, ?, ?, ?, ?, ?)""",
                 (str(uuid4()), row["section_id"], new_revision, row["title"], content, now),
             )
+            append_project_event(connection, project_id=project_id, event_type="context.updated",
+                entity_type="context_section", entity_id=row["section_id"],
+                payload={"section_key": section_key, "revision": new_revision}, created_at=now)
             updated = connection.execute(
                 "SELECT * FROM context_sections WHERE section_id = ?", (row["section_id"],)
             ).fetchone()
