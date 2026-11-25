@@ -19,15 +19,16 @@
 - [x] Task prerequisite add/remove controls using cycle-safe application services.
 - [x] Human-readable activity labels with text search and event-type filtering.
 - [x] Structured desktop forms for decision, task, milestone and reference fields.
-- [x] Offscreen Qt smoke tests and a dedicated Linux desktop CI job (runtime verification pending latest workflow result; Qt runtime currently constrained to the 6.9 series while investigating a Qt 6.12 offscreen shutdown crash).
+- [x] Offscreen Qt smoke tests covering window startup, structured forms, task prerequisites, project archiving and activity filtering.
+- [x] Dedicated Linux desktop CI job; PySide6 6.9 runtime smoke tests pass without shutdown errors.
 - [x] Automated core tests and GitHub Actions Python 3.11–3.13 matrix.
 
 ## Not yet implemented
 - [ ] Entity-specific soft-delete/restore policy and event retention/export policy.
 - [ ] Desktop design-system refinement, accessibility and keyboard interaction audit.
-- [ ] Project metadata editing and archive controls in the desktop UI.
-- [ ] Task dependency editing and visualization in the desktop UI.
-- [ ] Human-readable activity labels, details and filters.
+- [ ] Archived-project restore UI.
+- [ ] Task dependency graph visualization.
+- [ ] Activity date-range filters and export.
 - [ ] Package preview and safe transactional import.
 - [ ] Human-readable handover report and readiness scoring.
 - [ ] Search, backup and recovery workflows.
@@ -37,4 +38,4 @@
 - [ ] Independent security review and release qualification.
 
 ## Verification
-Core automated tests run on Python 3.11, 3.12 and 3.13. The desktop job installs PySide6 and Qt runtime libraries and runs the UI offscreen on Linux. A passing workflow is required before claiming runtime verification; this CI job does not replace Windows/macOS testing or interactive manual QA.
+Core automated tests pass on Python 3.11, 3.12 and 3.13. Linux offscreen desktop smoke tests pass with the supported PySide6 6.9 series. Verified workflow: https://github.com/sumankrsaurabh/Yuktara-Thread/actions/runs/45558323896. This does not replace Windows/macOS runtime testing, interactive manual QA, accessibility validation or release qualification.
