@@ -281,3 +281,43 @@ def test_handover_export_requires_secret_review_confirmation(
     assert token not in prompts[0]
     assert messages and "potential secret finding(s)" in messages[0]
     dispose_widget(window, application)
+
+
+def test_workspace_backup_and_restore_actions_in_desktop(tmp_path, application, monkeypatch):
+    from yuktara_thread.application.workspace import WorkspaceService
+
+    window = MainWindow(tmp_path / "workspace-ui.sqlite3")
+    project = window.workspace.create_project("UI backup project")
+    backup = tmp_path / "ui-workspace.backup"
+    restored_path = tmp_path / "ui-restored.sqlite3"
+    info_messages = []
+    monkeypatch.setattr(
+        QFileDialog, "getSaveFileName",
+        lambda *_args, **_kwargs: (str(backup), "SQLite backups (*.backup)"),
+    )
+    monkeypatch.setattr(
+        QMessageBox, "information",
+        lambda *args, **_kwargs: info_messages.append(args[2]) or QMessageBox.StandardButton.Ok,
+    )
+    window.backup_current_workspace()
+    assert backup.is_file()
+
+    monkeypatch.setattr(
+        QFileDialog, "getOpenFileName",
+        lambda *_args, **_kwargs: (str(backup), "SQLite backups (*.backup)"),
+    )
+    monkeypatch.setattr(
+        QFileDialog, "getSaveFileName",
+        lambda *_args, **_kwargs: (str(restored_path), "SQLite databases (*.sqlite3)"),
+    )
+    monkeypatch.setattr(
+        QMessageBox, "question",
+        lambda *_args, **_kwargs: QMessageBox.StandardButton.Yes,
+    )
+    window.restore_workspace_backup()
+
+    assert restored_path.is_file()
+    restored = WorkspaceService(restored_path)
+    assert restored.projects.get(project.project_id).name == "UI backup project"
+    assert len(info_messages) == 2
+    dispose_widget(window, application)
