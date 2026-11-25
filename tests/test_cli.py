@@ -173,3 +173,22 @@ def test_workspace_backup_and_restore_cli(tmp_path: Path, capsys) -> None:
     from yuktara_thread.application.workspace import WorkspaceService
     restored = WorkspaceService(restored_path)
     assert restored.projects.get(project["project_id"]).name == "Backup CLI"
+
+
+def test_workspace_search_cli_returns_matching_records(tmp_path: Path, capsys) -> None:
+    from yuktara_thread.application.workspace import WorkspaceService
+
+    database = tmp_path / "search-cli.sqlite3"
+    workspace = WorkspaceService(database)
+    project = workspace.create_project("Searchable project", "Contains a rare phrase")
+    workspace.intelligence.create_task(
+        project.project_id, title="Investigate search indexing"
+    )
+
+    assert main([
+        "search", "--database", str(database), "--query", "rare phrase",
+    ]) == 0
+    result = json.loads(capsys.readouterr().out)
+    assert result["result_count"] == 1
+    assert result["results"][0]["entity_type"] == "project"
+    assert result["results"][0]["project_id"] == project.project_id
