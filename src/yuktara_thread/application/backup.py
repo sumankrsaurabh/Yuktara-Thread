@@ -29,6 +29,24 @@ def _validate_database(path: Path) -> int:
             "SELECT COALESCE(MAX(version), 0) FROM schema_migrations"
         ).fetchone()
         version = int(row[0])
+        versions = [
+            int(item[0]) for item in connection.execute(
+                "SELECT version FROM schema_migrations ORDER BY version"
+            ).fetchall()
+        ]
+        if versions != list(range(1, version + 1)):
+            raise ValueError("Workspace database migration history is incomplete")
+        required_tables = {
+            "projects", "context_sections", "context_revisions", "project_events",
+            "decisions", "tasks", "task_dependencies", "milestones", "project_references",
+        }
+        existing_tables = {
+            str(item[0]) for item in connection.execute(
+                "SELECT name FROM sqlite_master WHERE type='table'"
+            ).fetchall()
+        }
+        if not required_tables.issubset(existing_tables):
+            raise ValueError("Workspace database is missing required application tables")
         latest = max(MIGRATIONS, default=0)
         if version < 1:
             raise ValueError("Workspace database has no applied schema migration")
