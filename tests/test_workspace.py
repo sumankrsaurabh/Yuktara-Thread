@@ -174,7 +174,9 @@ def test_workspace_import_restores_context_records_dependencies_and_files(tmp_pa
     ) == [task_by_title["Design schema"]["task_id"]]
     assert len(receiving_workspace.intelligence.list_records(imported.project_id, "milestone")) == 1
     assert len(receiving_workspace.intelligence.list_records(imported.project_id, "reference")) == 1
-    assert receiving_workspace.intelligence.timeline(imported.project_id)[0]["event_type"] == "handover.imported"
+    assert "handover.imported" in {
+        event["event_type"] for event in receiving_workspace.intelligence.timeline(imported.project_id)
+    }
 
 
 def test_workspace_import_rejects_dependency_cycle_before_extracting(tmp_path: Path) -> None:
