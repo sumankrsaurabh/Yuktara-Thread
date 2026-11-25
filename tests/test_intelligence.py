@@ -14,7 +14,7 @@ def workspace(tmp_path: Path):
 
 def test_schema_two_entities_and_events(workspace):
     service, project = workspace
-    assert service.schema_version == 2
+    assert service.schema_version == 3
     decision = service.intelligence.create_decision(
         project.project_id, title="Use SQLite", rationale="Offline-first"
     )
@@ -126,3 +126,38 @@ def test_task_dependency_removal_is_audited(workspace):
     assert "task.dependency_removed" in {
         event["event_type"] for event in repo.timeline(project.project_id)
     }
+
+
+
+def test_entity_delete_is_recoverable_and_audited(workspace):
+    service, project = workspace
+    repo = service.intelligence
+    task = repo.create_task(project.project_id, title="Recover this task")
+    dependent = repo.create_task(project.project_id, title="Dependent task")
+    repo.add_task_dependency(project.project_id, dependent["task_id"], task["task_id"])
+
+    repo.delete_record(project.project_id, "task", task["task_id"])
+    assert repo.list_records(project.project_id, "task") == [dependent]
+    deleted = repo.list_records(project.project_id, "task", include_deleted=True)
+    assert len(deleted) == 2
+    assert next(item for item in deleted if item["task_id"] == task["task_id"])["deleted_at"]
+
+    restored = service.restore_record(project.project_id, "task", task["task_id"])
+    assert restored["task_id"] == task["task_id"]
+    assert restored["title"] == "Recover this task"
+    assert restored["deleted_at"] is None
+    assert repo.list_task_dependencies(dependent["task_id"]) == [task["task_id"]]
+    event_types = [event["event_type"] for event in repo.timeline(project.project_id)]
+    assert "task.deleted" in event_types
+    assert "task.restored" in event_types
+
+
+def test_deleted_entities_cannot_be_restored_twice(workspace):
+    service, project = workspace
+    record = service.intelligence.create_reference(project.project_id, title="Docs")
+    with pytest.raises(LookupError, match="Deleted reference not found"):
+        service.restore_record(project.project_id, "reference", record["reference_id"])
+    service.intelligence.delete_record(project.project_id, "reference", record["reference_id"])
+    service.restore_record(project.project_id, "reference", record["reference_id"])
+    with pytest.raises(LookupError, match="Deleted reference not found"):
+        service.restore_record(project.project_id, "reference", record["reference_id"])
