@@ -1,7 +1,6 @@
 """Main desktop workspace window and project screens."""
 from __future__ import annotations
 
-import json
 from pathlib import Path
 
 from PySide6.QtCore import Qt
