@@ -4,7 +4,7 @@
 
 Yuktara Thread is a local-first project continuity and handover platform. It preserves decisions, rationale, tasks, milestones, references and selected files so another person can understand and continue a project.
 
-> **Development status:** early pre-alpha. Not production-ready. This repository contains a Python core, SQLite workspace and project intelligence foundation, and prototype portable handover package format. The full desktop application is still under development.
+> **Development status:** early pre-alpha. Not production-ready. This repository contains a Python core, SQLite workspace and project intelligence foundation, and prototype portable handover package format. An initial optional PySide6 desktop shell is now available for workspace projects, context, intelligence records and activity history.
 
 ## Principles
 - Local-first and usable offline.
@@ -24,6 +24,7 @@ Yuktara Thread is a local-first project continuity and handover platform. It pre
 - Task prerequisite relationships with cycle prevention and audited removal.
 - Versioned ZIP-based `.thread` package creation and verification.
 - CLI commands for package creation/verification and local workspace/project management.
+- Optional PySide6 desktop shell (`.[desktop]`) with project navigation, context editing, intelligence lists and activity history.
 - Automated tests and GitHub Actions CI matrix.
 
 ## Quick start
@@ -32,10 +33,11 @@ python -m venv .venv
 # Windows: .venv\\Scripts\\activate
 # macOS/Linux:
 source .venv/bin/activate
-python -m pip install -e ".[dev]"
+python -m pip install -e ".[dev,desktop]"
 thread create --input examples/sample-project --output sample.thread
 thread verify sample.thread
 pytest
+thread desktop --database ./workspace.sqlite3
 ```
 
 ## Workspace API
@@ -61,6 +63,7 @@ Initialize a database with `thread workspace init --database ./workspace.sqlite3
 - `src/yuktara_thread/infrastructure/database`: SQLite connection, migrations and repositories.
 - `src/yuktara_thread/infrastructure/package.py`: package serialization and verification.
 - `src/yuktara_thread/cli`: command-line interface.
+- `src/yuktara_thread/ui`: optional PySide6 presentation layer.
 - `tests`: automated tests.
 - `docs`: product, architecture, security and development documentation.
 
