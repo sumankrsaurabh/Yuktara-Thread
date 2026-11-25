@@ -77,3 +77,19 @@ class ProjectRepository:
                 entity_type="project", entity_id=project_id, payload={}, created_at=now)
             row = connection.execute("SELECT * FROM projects WHERE project_id = ?", (project_id,)).fetchone()
         return Project.from_row(row)
+
+    def restore(self, project_id: str) -> Project:
+        """Restore an archived project without changing its records or history."""
+        now = _now()
+        with self.database.transaction() as connection:
+            cursor = connection.execute(
+                """UPDATE projects SET status = 'active', archived_at = NULL, updated_at = ?
+                   WHERE project_id = ? AND status = 'archived'""",
+                (now, project_id),
+            )
+            if cursor.rowcount != 1:
+                raise LookupError("Archived project not found")
+            append_project_event(connection, project_id=project_id, event_type="project.restored",
+                entity_type="project", entity_id=project_id, payload={}, created_at=now)
+            row = connection.execute("SELECT * FROM projects WHERE project_id = ?", (project_id,)).fetchone()
+        return Project.from_row(row)
