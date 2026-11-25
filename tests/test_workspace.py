@@ -209,3 +209,30 @@ def test_workspace_import_rejects_dependency_cycle_before_extracting(tmp_path: P
 
     assert workspace.list_projects() == []
     assert not destination.exists()
+
+
+def test_workspace_import_removes_extracted_files_when_database_transaction_fails(tmp_path: Path) -> None:
+    import sqlite3
+    from yuktara_thread.application.handover import import_workspace_project
+    from yuktara_thread.domain.models import ProjectContext
+    from yuktara_thread.infrastructure.package import create_package
+
+    source = tmp_path / "source"
+    source.mkdir()
+    (source / "README.md").write_text("Rollback test", encoding="utf-8")
+    package = tmp_path / "rollback.thread"
+    create_package(source, package, ProjectContext.create("Rollback project").to_dict())
+    workspace = WorkspaceService(tmp_path / "receiving.sqlite3")
+    with workspace.database.transaction() as connection:
+        connection.execute(
+            """CREATE TRIGGER reject_handover_project
+               BEFORE INSERT ON projects
+               BEGIN SELECT RAISE(ABORT, 'simulated database failure'); END;"""
+        )
+    destination = tmp_path / "extracted"
+
+    with pytest.raises(sqlite3.IntegrityError, match="simulated database failure"):
+        import_workspace_project(workspace, package, destination)
+
+    assert workspace.list_projects() == []
+    assert not destination.exists()
