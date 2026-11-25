@@ -13,7 +13,7 @@ from PySide6.QtWidgets import (
 
 from yuktara_thread.application.handover import (
     export_workspace_project, import_workspace_project, inspect_workspace_import,
-    list_incomplete_workspace_imports, list_workspace_imports, reconcile_workspace_imports,
+    list_workspace_imports, reconcile_workspace_imports,
 )
 from yuktara_thread.application.handover_report import render_handover_report
 from yuktara_thread.application.search import search_workspace
@@ -480,6 +480,7 @@ class ImportRecoveryDialog(QDialog):
 
     def show_selected(self, row: int) -> None:
         if row < 0 or row >= len(self.entries):
+            self.copy_path_button.setEnabled(False)
             self.details.clear()
             return
         entry = self.entries[row]
