@@ -445,9 +445,16 @@ class PackagePreviewDialog(QDialog):
         name = str(project.get("name") or "Unnamed project")
         summary = str(project.get("summary") or "No summary provided")
         total_bytes = sum(int(item["size"]) for item in preview["files"])
+        decisions = len(project.get("decisions", []))
+        tasks = len(project.get("tasks", []))
+        milestones = len(project.get("milestones", []))
+        references = len(project.get("references", []))
+        context_sections = len(project.get("context_sections", []))
         overview = QLabel(
             f"{name}\n{summary}\n\n"
             f"{preview['file_count']} files · {total_bytes:,} bytes · "
+            f"{context_sections} context sections · {decisions} decisions · "
+            f"{tasks} tasks · {milestones} milestones · {references} references\n"
             f"Format {preview['format_version']}"
         )
         overview.setTextFormat(Qt.TextFormat.PlainText)
