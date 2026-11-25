@@ -23,11 +23,18 @@ jobs:
       - run: pyinstaller --noconfirm --clean --windowed --name YuktaraThread --paths src --collect-all PySide6 --collect-all shiboken6 scripts/desktop_entry.py
       - if: runner.os == 'Windows'
         shell: pwsh
-        run: Compress-Archive -Path dist/YuktaraThread/* -DestinationPath yuktara-thread-windows.zip
+        run: |
+          Compress-Archive -Path dist/YuktaraThread/* -DestinationPath yuktara-thread-windows.zip
+          $hash = (Get-FileHash yuktara-thread-windows.zip -Algorithm SHA256).Hash.ToLower()
+          "$hash  yuktara-thread-windows.zip" | Set-Content yuktara-thread-windows.zip.sha256
       - if: runner.os == 'macOS'
-        run: ditto -c -k --sequesterRsrc --keepParent dist/YuktaraThread.app yuktara-thread-macos.zip
+        run: |
+          ditto -c -k --sequesterRsrc --keepParent dist/YuktaraThread.app yuktara-thread-macos.zip
+          shasum -a 256 yuktara-thread-macos.zip > yuktara-thread-macos.zip.sha256
       - if: runner.os == 'Linux'
-        run: tar -czf yuktara-thread-linux.tar.gz -C dist YuktaraThread
+        run: |
+          tar -czf yuktara-thread-linux.tar.gz -C dist YuktaraThread
+          sha256sum yuktara-thread-linux.tar.gz > yuktara-thread-linux.tar.gz.sha256
       - uses: actions/upload-artifact@v4
         with:
           name: yuktara-thread-${{ runner.os }}
