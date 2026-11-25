@@ -35,6 +35,7 @@
 - [x] Archived-project restore UI and audited application/CLI restoration.
 - [x] Read-only layered task dependency graph visualization.
 - [x] Activity date-range filters and JSON/Markdown export.
+- [x] Stable cursor-based activity pagination and desktop Load older interaction (100 events per page).
 - [x] Split desktop presentation into context, panels, dialogs, pages and main-window modules.
 - [x] Initial accessible names/descriptions, predictable sidebar tab order and keyboard shortcuts.
 - [ ] Full accessibility audit, screen-reader testing and platform-specific keyboard QA.
