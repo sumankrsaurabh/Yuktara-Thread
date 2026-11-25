@@ -71,6 +71,16 @@ thread project export --database ./workspace.sqlite3 --project-id PROJECT_UUID \
 
 Workspace-aware export includes project metadata, all six context sections, decisions, tasks, milestones, references, task prerequisite edges and up to 1,000 recent activity events. It also includes the explicitly selected files. The export does not include the SQLite database, historical context revision bodies or archived projects.
 
+Import a verified workspace handover into a new project. The destination must be a new directory; the import restores project records and extracts package files there:
+
+```bash
+thread project import --database ./recipient.sqlite3 \
+  --package ./project-handover.thread \
+  --files-destination ./received-project-files
+```
+
+Database records are restored in one SQLite transaction. If restoration fails after extraction, the newly created files directory is removed. The recipient gets new local project/entity IDs; the source workspace database is never copied. Current import restores the latest context section contents and current project records. It records the count of source activity events in the import event, but does not replay the original event history or context revision bodies.
+
 ## Desktop application
 
 Install the optional desktop dependency and launch the native workspace:
@@ -84,7 +94,7 @@ The equivalent dedicated launcher is `thread-desktop --database ./workspace.sqli
 
 The current desktop foundation includes project selection and creation, six structured context editors with revision conflict protection, and tabs for decisions, tasks, milestones, references and project activity. Each intelligence tab supports create, edit and delete; the forms expose the structured fields stored by the domain layer. Deletions are recorded in project history.
 
-The UI remains pre-alpha. Project metadata editing and archive controls are available; archiving retains project data and removes the project from the active list. Task prerequisites can be added and removed from the Tasks tab; the service layer rejects self-links, cross-project links and cycles. Activity supports text search and event-type filtering. The desktop shell can preview verified packages, save a Markdown handover report, and extract files to a new folder. The report includes project metadata, file inventory, package integrity status and a recipient checklist. It does not prove publisher identity or include structured workspace records. A dependency graph visualization, archived-project restore UI, activity date-range filters/export, workspace-aware package serialization, keyboard/accessibility validation and installer validation are not complete.
+The UI remains pre-alpha. Project metadata editing and archive controls are available; archiving retains project data and removes the project from the active list. Task prerequisites can be added and removed from the Tasks tab; the service layer rejects self-links, cross-project links and cycles. Activity supports text search and event-type filtering. The desktop shell can preview verified packages, save a Markdown handover report, and extract files to a new folder. The report includes project metadata, file inventory, package integrity status and a recipient checklist. It does not prove publisher identity or include structured workspace records. A dependency graph visualization, archived-project restore UI, activity date-range filters/export, keyboard/accessibility validation and installer validation are not complete.
 
 ## Notes
 
