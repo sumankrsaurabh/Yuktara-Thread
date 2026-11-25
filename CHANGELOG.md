@@ -7,7 +7,7 @@ All notable changes to Yuktara Thread are documented here. Development versions 
 ### Added
 - Durable SQLite import journal records package manifest hash, destination, project ID, phase, state and timestamps before file extraction.
 - Project creation and the `database_committed` journal transition commit atomically in one SQLite transaction.
-- Non-destructive reconciliation finalizes committed imports and flags orphaned files or missing files for manual recovery.
+- Non-destructive reconciliation finalizes committed imports and flags orphaned files or missing files for manual recovery; attempts updated in the previous five minutes are skipped to avoid racing a live import.
 - `thread import-recovery --database PATH` reports and reconciles interrupted workspace imports.
 - Regression coverage for completed imports, failed imports, retained orphan files, committed import finalization and CLI reconciliation.
 
