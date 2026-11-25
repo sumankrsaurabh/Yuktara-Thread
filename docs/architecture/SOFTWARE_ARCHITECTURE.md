@@ -90,3 +90,8 @@ Infrastructure implements persistence and package operations used by the applica
 5. Add tests for normal, invalid, recovery and rollback paths.
 6. Update architecture, CLI, product status and security documentation.
 7. Wait for the complete CI matrix before describing the change as verified.
+
+
+## Activity timeline pagination
+
+Project activity is ordered newest-first by the composite `(created_at, event_id)` key. The repository accepts an optional exclusive `before` cursor taken from the final row of the previous page. Both fields are required to keep pagination stable when multiple events share a timestamp. The desktop currently requests 100 events per page and loads older pages only after explicit user action. Search, date filters and exports apply to the events currently loaded in the panel; the UI states this limitation. Streaming export and configurable page sizing remain future work.
