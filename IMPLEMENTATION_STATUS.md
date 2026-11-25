@@ -24,8 +24,8 @@
 - [x] Offscreen Qt smoke tests covering window startup, structured forms, task prerequisites, project archiving and activity filtering.
 - [x] Desktop package preview dialog with explicit file extraction to a user-selected new folder.
 - [x] Desktop import of verified handovers into the active workspace.
-- [x] Markdown handover report with structured context, decisions, tasks, milestones, references and dependency details.
 - [x] Markdown handover report generated from verified package metadata, file inventory, structured project context and readiness assessment.
+- [x] Deterministic AI-free handover readiness checks in project overview and exported reports.
 - [x] Workspace-aware package export for context sections, decisions, tasks, milestones, references, task dependencies and recent activity.
 - [x] CLI command for workspace-aware project export with an explicit selected-files directory.
 - [x] Recipient-side workspace import with new local IDs, context/record restoration and task dependency remapping.
@@ -45,7 +45,6 @@
 - [ ] Activity date-range filters and export.
 - [ ] Historical context revision-body export and configurable activity-history limits.
 - [ ] Import conflict resolution, merge/replace workflows and full source activity-history replay.
-- [x] Deterministic AI-free handover readiness checks in project overview and exported reports.
 - [ ] Secret-inclusion review.
 - [ ] Search, backup and recovery workflows.
 - [ ] Encryption, signatures and key management.
