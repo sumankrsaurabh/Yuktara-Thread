@@ -48,7 +48,7 @@
 - [ ] Entity soft-delete retention/purge policy and event retention/export policy.
 - [ ] Desktop design-system refinement, accessibility and keyboard interaction audit.
 
-- [ ] Task dependency graph visualization.
+- [x] Read-only layered task dependency graph in the desktop Tasks tab.
 
 - [ ] Historical context revision-body export and configurable activity-history limits.
 - [ ] Import conflict resolution, merge/replace workflows and full source activity-history replay.
@@ -60,4 +60,4 @@
 - [ ] Independent security review and release qualification.
 
 ## Verification
-Core automated tests pass on Python 3.11, 3.12 and 3.13. Linux offscreen desktop smoke tests pass with the supported PySide6 6.9 series. Package transfer tests cover preview, successful extraction, tamper rejection and existing-destination preservation. Latest verification is tracked in GitHub Actions for each pushed commit. The 0.5.3 desktop recovery and activity-export changes require the current CI run to complete before they are considered verified. This does not replace Windows/macOS runtime testing, interactive manual QA, accessibility validation or release qualification.
+Core automated tests pass on Python 3.11, 3.12 and 3.13. Linux offscreen desktop smoke tests pass with the supported PySide6 6.9 series. Package transfer tests cover preview, successful extraction, tamper rejection and existing-destination preservation. Latest verification is tracked in GitHub Actions for each pushed commit. The 0.5.3 desktop recovery, activity export and dependency-graph changes require the current CI run to complete before they are considered verified. This does not replace Windows/macOS runtime testing, interactive manual QA, accessibility validation or release qualification.
