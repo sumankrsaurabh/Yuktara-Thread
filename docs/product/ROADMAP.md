@@ -27,11 +27,13 @@
 - [x] Task prerequisite add/remove controls.
 - [x] Human-readable activity labels, text search and event-type filters.
 - [x] Linux offscreen desktop runtime smoke tests.
+- [x] Verified package preview and staged safe file extraction (CLI and desktop).
 - [ ] Archived-project restore UI.
 - [ ] Task dependency graph visualization.
 - [ ] Activity date-range filters and export.
 - [ ] Desktop design-system refinement and accessibility.
-- [ ] Package preview, safe import and handover report.
+- [ ] Workspace-aware package serialization and import for context, decisions, tasks, milestones, references and activity.
+- [ ] Human-readable handover report.
 - [ ] Secret inclusion warnings and readiness checks.
 - [ ] Windows/Linux/macOS packaging and platform QA.
 
