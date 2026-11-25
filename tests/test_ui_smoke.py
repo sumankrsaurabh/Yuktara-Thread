@@ -8,7 +8,7 @@ PySide6 = pytest.importorskip("PySide6")
 from PySide6.QtCore import QCoreApplication, QEvent, Qt
 from PySide6.QtWidgets import QApplication, QMessageBox, QPlainTextEdit, QTabWidget
 
-from yuktara_thread.ui.main_window import EntityEditorDialog, EntityPanel, MainWindow
+from yuktara_thread.ui.main_window import ActivityPanel, EntityEditorDialog, EntityPanel, MainWindow
 
 
 @pytest.fixture(scope="module")
@@ -121,3 +121,23 @@ def test_archive_control_archives_project_and_removes_it_from_active_list(
     assert window.workspace.list_projects(include_archived=True)[0].status == "archived"
     window.close()
     application.processEvents()
+
+
+def test_activity_panel_filters_by_event_type_and_text(tmp_path, application):
+    window = MainWindow(tmp_path / "activity-smoke.sqlite3")
+    project = window.workspace.create_project("Activity project")
+    window.workspace.intelligence.create_task(project.project_id, title="Write migration")
+    panel = ActivityPanel(window.workspace, project.project_id)
+
+    assert panel.list.count() >= 2
+    panel.search.setText("Write migration")
+    assert panel.list.count() == 1
+    panel.search.clear()
+    task_event_index = panel.kind_filter.findData("task.created")
+    assert task_event_index >= 0
+    panel.kind_filter.setCurrentIndex(task_event_index)
+    assert panel.list.count() == 1
+    assert "Task added" in panel.list.item(0).text()
+
+    dispose_widget(panel, application)
+    dispose_widget(window, application)
