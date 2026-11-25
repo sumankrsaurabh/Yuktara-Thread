@@ -494,3 +494,27 @@ def test_context_history_can_restore_previous_revision_as_new_snapshot(tmp_path,
     assert current.content == first_content
     assert restored_revisions == [3]
     dispose_widget(dialog, application)
+
+
+
+def test_activity_panel_refresh_loads_new_project_events(tmp_path, application):
+    window = MainWindow(tmp_path / "activity-refresh.sqlite3")
+    project = window.workspace.create_project("Activity refresh")
+    panel = ActivityPanel(window.workspace, project.project_id)
+    initial_count = len(panel.events)
+
+    window.workspace.intelligence.create_task(
+        project.project_id, title="Created after activity panel opened"
+    )
+    assert len(panel.events) == initial_count
+
+    panel.refresh_events()
+
+    assert len(panel.events) == initial_count + 1
+    assert any(
+        event["event_type"] == "task.created"
+        and event["payload"].get("title") == "Created after activity panel opened"
+        for event in panel.events
+    )
+    dispose_widget(panel, application)
+    dispose_widget(window, application)
