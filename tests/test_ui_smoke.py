@@ -5,7 +5,7 @@ import pytest
 
 PySide6 = pytest.importorskip("PySide6")
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import QCoreApplication, QEvent, Qt
 from PySide6.QtWidgets import QApplication, QMessageBox, QPlainTextEdit, QTabWidget
 
 from yuktara_thread.ui.main_window import EntityEditorDialog, EntityPanel, MainWindow
@@ -38,6 +38,8 @@ def test_main_window_loads_and_opens_project(tmp_path, application):
     ]
 
     window.close()
+    window.deleteLater()
+    QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
     application.processEvents()
 
 
@@ -55,6 +57,8 @@ def test_decision_editor_preserves_structured_fields(application):
     assert values["alternatives"] == ["JSON files", "SQLite"]
     assert values["status"] == "proposed"
     dialog.close()
+    dialog.deleteLater()
+    QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
 
 
 def test_task_dependency_controls_use_audited_service(tmp_path, application):
