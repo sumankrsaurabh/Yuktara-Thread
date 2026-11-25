@@ -52,3 +52,21 @@ jobs:
       - run: python -m pip install --upgrade pip build twine
       - run: python -m build
       - run: python -m twine check dist/*
+
+  desktop-bundle-smoke:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libegl1 libgl1
+      - run: python -m pip install --upgrade pip
+      - run: python -m pip install -e ".[desktop]" pyinstaller
+      - run: pyinstaller --noconfirm --clean --windowed --name YuktaraThread --paths src --collect-all PySide6 --collect-all shiboken6 scripts/desktop_entry.py
+      - run: python -c "from pathlib import Path; import sys; p=Path('dist') / ('YuktaraThread.app' if sys.platform == 'darwin' else 'YuktaraThread'); assert p.exists(), p"
