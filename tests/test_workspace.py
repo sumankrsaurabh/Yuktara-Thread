@@ -256,6 +256,46 @@ def test_workspace_import_removes_extracted_files_when_database_transaction_fail
     assert not destination.exists()
 
 
+def test_workspace_import_reports_manual_recovery_when_file_cleanup_fails(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from yuktara_thread.application import handover
+    from yuktara_thread.application.handover import import_workspace_project
+    from yuktara_thread.domain.models import ProjectContext
+    from yuktara_thread.infrastructure.package import create_package
+
+    source = tmp_path / "source"
+    source.mkdir()
+    (source / "README.md").write_text("Recovery guidance", encoding="utf-8")
+    package = tmp_path / "recovery.thread"
+    create_package(source, package, ProjectContext.create("Recovery project").to_dict())
+    workspace = WorkspaceService(tmp_path / "receiving.sqlite3")
+    with workspace.database.transaction() as connection:
+        connection.execute(
+            """CREATE TRIGGER reject_handover_project
+               BEFORE INSERT ON projects
+               BEGIN SELECT RAISE(ABORT, 'simulated database failure'); END;"""
+        )
+    destination = tmp_path / "recovery-files"
+    real_rmtree = handover.shutil.rmtree
+
+    def retain_directory(path, *args, **kwargs):
+        if Path(path) == destination:
+            raise OSError("simulated cleanup failure")
+        return real_rmtree(path, *args, **kwargs)
+
+    monkeypatch.setattr(handover.shutil, "rmtree", retain_directory)
+
+    with pytest.raises(RuntimeError, match="could not be removed automatically") as error:
+        import_workspace_project(workspace, package, destination)
+
+    assert error.value.phase == "database_transaction"
+    assert error.value.recovery_path == destination
+    assert destination.exists()
+    assert "After confirming no project was created" in str(error.value)
+    assert workspace.list_projects() == []
+
+
 def test_archived_project_can_be_restored_without_losing_data_or_history(tmp_path: Path) -> None:
     workspace = WorkspaceService(tmp_path / "workspace.sqlite3")
     project = workspace.create_project("Recoverable project", "Keep this summary")
