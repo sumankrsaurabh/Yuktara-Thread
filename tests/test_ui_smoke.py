@@ -6,7 +6,7 @@ import pytest
 PySide6 = pytest.importorskip("PySide6")
 
 from PySide6.QtCore import QCoreApplication, QEvent, Qt
-from PySide6.QtWidgets import QApplication, QLabel, QMessageBox, QTabWidget
+from PySide6.QtWidgets import QApplication, QFileDialog, QLabel, QMessageBox, QTabWidget
 
 from yuktara_thread.domain.models import ProjectContext
 from yuktara_thread.infrastructure.package import create_package, preview_package
@@ -160,4 +160,24 @@ def test_package_preview_dialog_displays_verified_file_list(tmp_path, applicatio
     assert "Preview in UI" in dialog.findChild(QLabel).text()
     assert "handover.md" in dialog.file_list.toPlainText()
     assert "Integrity checks passed" in dialog.findChildren(QLabel)[1].text()
+    dispose_widget(dialog, application)
+
+
+def test_package_preview_saves_handover_report(tmp_path, application, monkeypatch):
+    source = tmp_path / "report-source"
+    source.mkdir()
+    (source / "README.md").write_text("Project instructions", encoding="utf-8")
+    package = tmp_path / "report.thread"
+    create_package(source, package, ProjectContext.create("Report project", "A test report").to_dict())
+    dialog = PackagePreviewDialog(package, preview_package(package))
+    output = tmp_path / "handover.md"
+
+    monkeypatch.setattr(QFileDialog, "getSaveFileName", lambda *_args, **_kwargs: (str(output), "Markdown"))
+    monkeypatch.setattr(QMessageBox, "information", lambda *_args, **_kwargs: QMessageBox.StandardButton.Ok)
+
+    dialog.save_report()
+
+    report = output.read_text(encoding="utf-8")
+    assert "# Handover: Report project" in report
+    assert "`README.md`" in report
     dispose_widget(dialog, application)
