@@ -1,0 +1,171 @@
+"""Repositories for decisions, tasks, milestones, references and project events."""
+from __future__ import annotations
+import json
+from datetime import datetime, timezone
+from uuid import uuid4
+
+from yuktara_thread.infrastructure.database.connection import Database
+
+
+def _now() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+class ProjectIntelligenceRepository:
+    """Transactional persistence for structured project knowledge and its activity stream."""
+    TABLES = {
+        "decision": ("decisions", "decision_id"),
+        "task": ("tasks", "task_id"),
+        "milestone": ("milestones", "milestone_id"),
+        "reference": ("project_references", "reference_id"),
+    }
+
+    def __init__(self, database: Database) -> None:
+        self.database = database
+
+    @staticmethod
+    def _event(connection, project_id: str, event_type: str, entity_type: str,
+               entity_id: str | None, payload: dict[str, object], now: str) -> None:
+        # Event payloads are intentionally curated; never persist secrets or file contents here.
+        connection.execute(
+            """INSERT INTO project_events
+               (event_id, project_id, event_type, entity_type, entity_id, payload_json, created_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?)""",
+            (str(uuid4()), project_id, event_type, entity_type, entity_id,
+             json.dumps(payload, ensure_ascii=False, sort_keys=True), now),
+        )
+
+    @staticmethod
+    def _decode(kind: str, row: dict[str, object]) -> dict[str, object]:
+        if kind == "decision":
+            row["alternatives"] = json.loads(row.pop("alternatives_json"))
+        return row
+
+    def _create(self, kind: str, project_id: str, values: dict[str, object]) -> dict[str, object]:
+        table, id_column = self.TABLES[kind]
+        title = str(values.get("title", "")).strip()
+        if not title or len(title) > 240:
+            raise ValueError("Title must contain 1–240 characters")
+        defaults = {
+            "decision": {"problem": "", "selected_option": "", "alternatives": [],
+                         "rationale": "", "consequences": "", "status": "proposed"},
+            "task": {"description": "", "status": "open", "priority": "normal", "owner": "", "due_at": None},
+            "milestone": {"description": "", "due_at": None, "status": "planned"},
+            "reference": {"reference_type": "other", "uri": "", "notes": ""},
+        }[kind]
+        data = {**defaults, **values, "title": title}
+        if kind == "decision":
+            if data["status"] not in {"proposed", "accepted", "rejected", "superseded"}:
+                raise ValueError("Invalid decision status")
+            if not isinstance(data["alternatives"], list) or not all(isinstance(x, str) for x in data["alternatives"]):
+                raise ValueError("Decision alternatives must be a list of strings")
+            data["alternatives_json"] = json.dumps(data.pop("alternatives"), ensure_ascii=False)
+        elif kind == "task":
+            if data["status"] not in {"open", "in_progress", "blocked", "completed", "cancelled"}:
+                raise ValueError("Invalid task status")
+            if data["priority"] not in {"low", "normal", "high", "critical"}:
+                raise ValueError("Invalid task priority")
+        elif kind == "milestone" and data["status"] not in {"planned", "in_progress", "completed", "cancelled"}:
+            raise ValueError("Invalid milestone status")
+        elif kind == "reference" and data["reference_type"] not in {"document", "repository", "website", "issue", "person", "other"}:
+            raise ValueError("Invalid reference type")
+        record_id, now = str(uuid4()), _now()
+        columns = [id_column, "project_id", *data.keys(), "created_at", "updated_at"]
+        params = [record_id, project_id, *data.values(), now, now]
+        with self.database.transaction() as connection:
+            project = connection.execute("SELECT status FROM projects WHERE project_id = ?", (project_id,)).fetchone()
+            if project is None or project["status"] != "active":
+                raise LookupError("Active project not found")
+            connection.execute(
+                f"INSERT INTO {table} ({', '.join(columns)}) VALUES ({', '.join('?' for _ in columns)})",
+                params,
+            )
+            self._event(connection, project_id, f"{kind}.created", kind, record_id, {"title": title}, now)
+            row = connection.execute(f"SELECT * FROM {table} WHERE {id_column} = ?", (record_id,)).fetchone()
+        return self._decode(kind, dict(row))
+
+    def create_decision(self, project_id: str, *, title: str, problem: str = "",
+                        selected_option: str = "", alternatives: list[str] | None = None,
+                        rationale: str = "", consequences: str = "", status: str = "proposed"):
+        return self._create("decision", project_id, {
+            "title": title, "problem": problem, "selected_option": selected_option,
+            "alternatives": alternatives or [], "rationale": rationale,
+            "consequences": consequences, "status": status,
+        })
+
+    def create_task(self, project_id: str, *, title: str, description: str = "",
+                    status: str = "open", priority: str = "normal", owner: str = "",
+                    due_at: str | None = None):
+        return self._create("task", project_id, {"title": title, "description": description,
+            "status": status, "priority": priority, "owner": owner, "due_at": due_at})
+
+    def create_milestone(self, project_id: str, *, title: str, description: str = "",
+                         due_at: str | None = None, status: str = "planned"):
+        return self._create("milestone", project_id, {"title": title, "description": description,
+            "due_at": due_at, "status": status})
+
+    def create_reference(self, project_id: str, *, title: str, reference_type: str = "other",
+                         uri: str = "", notes: str = ""):
+        return self._create("reference", project_id, {"title": title,
+            "reference_type": reference_type, "uri": uri, "notes": notes})
+
+    def list_records(self, project_id: str, entity_type: str) -> list[dict[str, object]]:
+        if entity_type not in self.TABLES:
+            raise ValueError("Unknown project entity type")
+        table, _ = self.TABLES[entity_type]
+        with self.database.read() as connection:
+            rows = connection.execute(
+                f"SELECT * FROM {table} WHERE project_id = ? ORDER BY created_at DESC", (project_id,)
+            ).fetchall()
+        return [self._decode(entity_type, dict(row)) for row in rows]
+
+    def add_task_dependency(self, project_id: str, task_id: str, depends_on_task_id: str) -> None:
+        now = _now()
+        with self.database.transaction() as connection:
+            rows = connection.execute(
+                "SELECT task_id FROM tasks WHERE project_id = ? AND task_id IN (?, ?)",
+                (project_id, task_id, depends_on_task_id),
+            ).fetchall()
+            if len(rows) != 2 or task_id == depends_on_task_id:
+                raise ValueError("Both distinct tasks must belong to the same project")
+            # A -> B is cyclic if B already reaches A through its prerequisites.
+            cycle = connection.execute(
+                """WITH RECURSIVE reachable(task_id) AS (
+                       SELECT depends_on_task_id FROM task_dependencies WHERE task_id = ?
+                       UNION SELECT d.depends_on_task_id FROM task_dependencies d
+                       JOIN reachable r ON d.task_id = r.task_id
+                   ) SELECT 1 FROM reachable WHERE task_id = ? LIMIT 1""",
+                (depends_on_task_id, task_id),
+            ).fetchone()
+            if cycle:
+                raise ValueError("Task dependency would create a cycle")
+            connection.execute(
+                "INSERT INTO task_dependencies(task_id, depends_on_task_id, created_at) VALUES (?, ?, ?)",
+                (task_id, depends_on_task_id, now),
+            )
+            self._event(connection, project_id, "task.dependency_added", "task", task_id,
+                        {"depends_on_task_id": depends_on_task_id}, now)
+
+    def list_task_dependencies(self, task_id: str) -> list[str]:
+        with self.database.read() as connection:
+            rows = connection.execute(
+                "SELECT depends_on_task_id FROM task_dependencies WHERE task_id = ? ORDER BY created_at",
+                (task_id,),
+            ).fetchall()
+        return [row["depends_on_task_id"] for row in rows]
+
+    def timeline(self, project_id: str, *, limit: int = 100) -> list[dict[str, object]]:
+        if not 1 <= limit <= 1000:
+            raise ValueError("Timeline limit must be between 1 and 1000")
+        with self.database.read() as connection:
+            rows = connection.execute(
+                """SELECT event_id, event_type, entity_type, entity_id, payload_json, created_at
+                   FROM project_events WHERE project_id = ?
+                   ORDER BY created_at DESC, event_id DESC LIMIT ?""", (project_id, limit)
+            ).fetchall()
+        result = []
+        for row in rows:
+            item = dict(row)
+            item["payload"] = json.loads(item.pop("payload_json"))
+            result.append(item)
+        return result
