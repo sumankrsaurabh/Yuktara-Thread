@@ -8,7 +8,11 @@ PySide6 = pytest.importorskip("PySide6")
 from PySide6.QtCore import QCoreApplication, QEvent, Qt
 from PySide6.QtWidgets import QApplication, QMessageBox, QPlainTextEdit, QTabWidget
 
-from yuktara_thread.ui.main_window import ActivityPanel, EntityEditorDialog, EntityPanel, MainWindow
+from yuktara_thread.domain.models import ProjectContext
+from yuktara_thread.infrastructure.package import create_package, preview_package
+from yuktara_thread.ui.main_window import (
+    ActivityPanel, EntityEditorDialog, EntityPanel, MainWindow, PackagePreviewDialog,
+)
 
 
 @pytest.fixture(scope="module")
@@ -141,3 +145,19 @@ def test_activity_panel_filters_by_event_type_and_text(tmp_path, application):
 
     dispose_widget(panel, application)
     dispose_widget(window, application)
+
+
+def test_package_preview_dialog_displays_verified_file_list(tmp_path, application):
+    source = tmp_path / "package-source"
+    source.mkdir()
+    (source / "handover.md").write_text("Next steps", encoding="utf-8")
+    package = tmp_path / "preview.thread"
+    create_package(source, package, ProjectContext.create("Preview in UI").to_dict())
+
+    preview = preview_package(package)
+    dialog = PackagePreviewDialog(package, preview)
+
+    assert "Preview in UI" in dialog.findChild(QLabel).text()
+    assert "handover.md" in dialog.file_list.toPlainText()
+    assert "Integrity checks passed" in dialog.findChildren(QLabel)[1].text()
+    dispose_widget(dialog, application)
