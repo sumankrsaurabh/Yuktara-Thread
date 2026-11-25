@@ -264,6 +264,8 @@ class EntityPanel(QWidget):
         self.project_id = project_id
         self.kind = kind
         self.list = QListWidget()
+        self.list.setAccessibleName(f"{kind.title()} records")
+        self.list.setAccessibleDescription(f"Active {kind} records for this project.")
         layout = QVBoxLayout(self)
         description = QLabel(
             "Capture enough detail for another person to understand and continue this work."
@@ -273,9 +275,13 @@ class EntityPanel(QWidget):
         layout.addWidget(self.list, 1)
         actions = QHBoxLayout()
         add = QPushButton(f"Add {kind}")
+        add.setAccessibleName(f"Add {kind}")
         edit = QPushButton("Edit details")
+        edit.setAccessibleName(f"Edit selected {kind}")
         delete = QPushButton("Delete")
+        delete.setAccessibleName(f"Delete selected {kind}")
         recover = QPushButton("Deleted records…")
+        recover.setAccessibleName(f"Review deleted {kind} records")
         add.setObjectName("primary")
         actions.addWidget(add)
         actions.addStretch(1)
@@ -300,6 +306,7 @@ class EntityPanel(QWidget):
             layout.addWidget(dependency_heading)
             dependency_row = QHBoxLayout()
             self.prerequisite_picker = QComboBox()
+            self.prerequisite_picker.setAccessibleName("Choose prerequisite task")
             self.prerequisite_picker.setPlaceholderText("Select a prerequisite task")
             add_dependency = QPushButton("Add prerequisite")
             remove_dependency = QPushButton("Remove selected")
@@ -308,6 +315,7 @@ class EntityPanel(QWidget):
             dependency_row.addWidget(remove_dependency)
             layout.addLayout(dependency_row)
             self.dependency_list = QListWidget()
+            self.dependency_list.setAccessibleName("Prerequisites of selected task")
             self.dependency_list.setMaximumHeight(120)
             layout.addWidget(self.dependency_list)
             add_dependency.clicked.connect(self.add_dependency)
@@ -496,6 +504,8 @@ class ActivityPanel(QWidget):
         layout.addLayout(filters)
 
         self.list = QListWidget()
+        self.list.setAccessibleName("Filtered project activity")
+        self.list.setAccessibleDescription("Activity entries matching the current filters.")
         layout.addWidget(self.list, 1)
         footer = QHBoxLayout()
         self.filter_status = QLabel("Dates are inclusive. Leave blank for no date bound.")
