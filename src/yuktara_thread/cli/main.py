@@ -60,7 +60,8 @@ def build_parser() -> argparse.ArgumentParser:
     project_export.add_argument("--files", required=True, type=Path,
                                 help="Directory containing explicitly selected handover files")
     project_export.add_argument("--output", required=True, type=Path)
-    project_export.add_argument("--allow-potential-secrets", action="store_true",\n                                help="Proceed after reviewing local potential-secret warnings")
+    project_export.add_argument("--allow-potential-secrets", action="store_true",
+                                help="Proceed after reviewing local potential-secret warnings")
     project_import = project_actions.add_parser("import", help="Import a .thread handover into the workspace")
     project_import.add_argument("--database", required=True, type=Path)
     project_import.add_argument("--package", required=True, type=Path)
