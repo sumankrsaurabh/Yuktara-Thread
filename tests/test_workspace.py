@@ -237,3 +237,29 @@ def test_workspace_import_removes_extracted_files_when_database_transaction_fail
 
     assert workspace.list_projects() == []
     assert not destination.exists()
+
+
+def test_archived_project_can_be_restored_without_losing_data_or_history(tmp_path: Path) -> None:
+    workspace = WorkspaceService(tmp_path / "workspace.sqlite3")
+    project = workspace.create_project("Recoverable project", "Keep this summary")
+    task = workspace.intelligence.create_task(project.project_id, title="Preserve this task")
+    workspace.archive_project(project.project_id)
+
+    restored = workspace.restore_project(project.project_id)
+
+    assert restored.status == "active"
+    assert restored.archived_at is None
+    assert restored.name == "Recoverable project"
+    assert restored.summary == "Keep this summary"
+    assert workspace.list_projects()[0].project_id == project.project_id
+    assert workspace.intelligence.list_records(project.project_id, "task")[0]["task_id"] == task["task_id"]
+    event_types = [event["event_type"] for event in workspace.intelligence.timeline(project.project_id)]
+    assert "project.archived" in event_types
+    assert "project.restored" in event_types
+
+
+def test_only_archived_projects_can_be_restored(tmp_path: Path) -> None:
+    workspace = WorkspaceService(tmp_path / "workspace.sqlite3")
+    project = workspace.create_project("Already active")
+    with pytest.raises(LookupError, match="Archived project not found"):
+        workspace.restore_project(project.project_id)
