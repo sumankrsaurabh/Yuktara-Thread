@@ -23,6 +23,8 @@ Yuktara Thread is a local-first project continuity and handover platform. It pre
 - Append-only activity events for project, context, intelligence and task dependency changes.
 - Task prerequisite relationships with cycle prevention and audited removal.
 - Versioned ZIP-based `.thread` package creation, integrity verification, non-extracting preview and staged safe file extraction.
+- Workspace-aware handover export for structured context, decisions, tasks, milestones, references, task prerequisites, recent activity and explicitly selected files.
+- Markdown handover report export from a verified package preview.
 - Safe extraction rejects existing destinations, validates manifest metadata and file hashes, and removes staging data on failure.
 - CLI commands for package creation/verification and local workspace/project management.
 - Optional PySide6 6.9 desktop shell (`.[desktop]`) with project editing/archive, context editing, structured intelligence forms, task prerequisites, searchable activity, verified package preview/extraction and Markdown handover report export.
@@ -69,7 +71,7 @@ Initialize a database with `thread workspace init --database ./workspace.sqlite3
 - `docs`: product, architecture, security and development documentation.
 
 ## Roadmap
-See [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) and [roadmap](docs/product/ROADMAP.md). Next: workspace-aware package serialization (context, decisions, tasks, milestones and references), readiness checks and recipient-side workspace import.
+See [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) and [roadmap](docs/product/ROADMAP.md). Next: recipient-side workspace import with transactional restoration, readiness checks and secret-inclusion review.
 
 ## Security
 Package verification checks integrity, not publisher identity. Packages are not encrypted or signed. This project has not undergone an independent security audit. See [SECURITY.md](SECURITY.md) and [threat model](docs/security/THREAT_MODEL.md).
