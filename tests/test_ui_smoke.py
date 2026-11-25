@@ -97,6 +97,7 @@ def test_task_dependency_controls_use_audited_service(tmp_path, application):
         dependent["task_id"]
     )
     assert panel.dependency_list.count() == 1
+    panel.dependency_list.setCurrentRow(0)
 
     panel.remove_dependency()
     assert window.workspace.intelligence.list_task_dependencies(dependent["task_id"]) == []
