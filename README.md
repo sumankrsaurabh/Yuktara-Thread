@@ -31,7 +31,7 @@ Yuktara Thread is a local-first project continuity and handover platform. It pre
 - Safe extraction rejects existing destinations, validates manifest metadata and file hashes, and removes staging data on failure.
 - CLI commands for package creation/verification and local workspace/project management.
 - Optional PySide6 desktop application (`.[desktop]`) with first-run workspace selection, project editing/archive, context editing and revision history, structured intelligence forms, task prerequisites and dependency map, deleted-record recovery, searchable/filterable/exportable activity, verified package preview, workspace import, file extraction and Markdown handover report export.
-- Automated tests and GitHub Actions CI for Python 3.11–3.13, with Windows/macOS/Linux platform smoke coverage being added.
+- Automated tests and GitHub Actions CI for Python 3.11–3.13, with Windows/macOS/Linux platform smoke and portable-bundle builds included in CI.
 
 ## Quick start
 ```bash
