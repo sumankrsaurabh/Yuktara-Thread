@@ -18,6 +18,31 @@ from yuktara_thread.infrastructure.database.repositories.events import append_pr
 from yuktara_thread.infrastructure.package import PackageError, create_package, import_package, preview_package
 
 
+class WorkspaceImportError(RuntimeError):
+    """Import failure with a phase and actionable file-recovery diagnostics."""
+
+    def __init__(self, message: str, *, phase: str, recovery_path: Path | None = None) -> None:
+        self.phase = phase
+        self.recovery_path = recovery_path
+        detail = f"Workspace import failed during {phase.replace('_', ' ')}: {message}"
+        if recovery_path is not None:
+            detail += (
+                f"\nThe extracted files could not be removed automatically. "
+                f"After confirming no project was created, inspect or remove: {recovery_path}"
+            )
+        super().__init__(detail)
+
+
+def _remove_import_files(path: Path) -> bool:
+    """Remove an import's published files directory and verify the result."""
+    try:
+        if path.exists() or path.is_symlink():
+            shutil.rmtree(path)
+    except OSError:
+        return False
+    return not path.exists() and not path.is_symlink()
+
+
 def export_workspace_project(
     workspace: WorkspaceService,
     project_id: str,
@@ -412,16 +437,29 @@ def import_workspace_project(
             "payload": payload, "created_at": created_at,
         })
 
-    extracted = import_package(package_file, files_destination)
+    phase = "file_extraction"
+    try:
+        extracted = import_package(package_file, files_destination)
+    except Exception as exc:
+        raise WorkspaceImportError(
+            str(exc), phase=phase,
+        ) from exc
+
+    phase = "post_extraction_verification"
     try:
         confirmed_preview = preview_package(package_file)
         if confirmed_preview["manifest_sha256"] != preview["manifest_sha256"]:
             raise PackageError("Package changed during workspace import")
-    except Exception:
-        shutil.rmtree(extracted, ignore_errors=True)
-        raise
+    except Exception as exc:
+        cleanup_ok = _remove_import_files(extracted)
+        raise WorkspaceImportError(
+            str(exc), phase=phase,
+            recovery_path=None if cleanup_ok else extracted,
+        ) from exc
+
     project_id = str(uuid4())
     now = datetime.now(timezone.utc).isoformat()
+    phase = "database_transaction"
     try:
         with workspace.database.transaction() as connection:
             connection.execute(
@@ -525,7 +563,12 @@ def import_workspace_project(
         )
         return project, extracted
     except Exception as exc:
-        shutil.rmtree(extracted, ignore_errors=True)
-        if isinstance(exc, sqlite3.Error):
-            raise RuntimeError(f"Workspace database import failed: {exc}") from exc
-        raise
+        cleanup_ok = _remove_import_files(extracted)
+        message = (
+            f"Workspace database import failed: {exc}"
+            if isinstance(exc, sqlite3.Error) else str(exc)
+        )
+        raise WorkspaceImportError(
+            message, phase=phase,
+            recovery_path=None if cleanup_ok else extracted,
+        ) from exc
