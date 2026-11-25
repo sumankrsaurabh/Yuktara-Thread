@@ -10,9 +10,10 @@ from PySide6.QtWidgets import (
     QPushButton, QPlainTextEdit, QStackedWidget, QTabWidget, QVBoxLayout, QWidget,
 )
 
-from yuktara_thread.application.handover import import_workspace_project
+from yuktara_thread.application.handover import export_workspace_project, import_workspace_project
 from yuktara_thread.application.handover_report import render_handover_report
 from yuktara_thread.application.readiness import assess_handover_readiness
+from yuktara_thread.application.secret_scan import scan_selected_files
 from yuktara_thread.application.workspace import WorkspaceService
 from yuktara_thread.infrastructure.package import PackageError, import_package, preview_package
 
@@ -679,6 +680,8 @@ class MainWindow(QMainWindow):
         create = QPushButton("＋  New project")
         create.setObjectName("primary")
         side_layout.addWidget(create)
+        create_handover = QPushButton("Create handover package")
+        side_layout.addWidget(create_handover)
         package_preview = QPushButton("Preview .thread package")
         side_layout.addWidget(package_preview)
         side_layout.addWidget(QLabel(f"Database: {database_path.name}"))
@@ -704,6 +707,7 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(root)
 
         create.clicked.connect(self.create_project)
+        create_handover.clicked.connect(self.create_handover_package)
         package_preview.clicked.connect(self.open_package_preview)
         self.projects.currentItemChanged.connect(self.select_project)
         self.refresh_projects()
@@ -719,6 +723,59 @@ class MainWindow(QMainWindow):
                 self.projects.setCurrentItem(item)
         if not projects:
             self.pages.setCurrentWidget(self.empty)
+
+    def create_handover_package(self) -> None:
+        current = self.projects.currentItem()
+        if current is None:
+            QMessageBox.information(self, "Select a project", "Choose a project before creating a handover.")
+            return
+        project_id = str(current.data(Qt.ItemDataRole.UserRole))
+        source_directory = QFileDialog.getExistingDirectory(
+            self, "Choose the files to include in this handover"
+        )
+        if not source_directory:
+            return
+        output, _selected_filter = QFileDialog.getSaveFileName(
+            self, "Save Thread handover", f"{current.text()}.thread",
+            "Thread packages (*.thread)",
+        )
+        if not output:
+            return
+        output_path = Path(output)
+        if output_path.suffix.lower() != ".thread":
+            output_path = output_path.with_suffix(".thread")
+        try:
+            scan = scan_selected_files(Path(source_directory))
+            if scan["finding_count"]:
+                lines = [
+                    f"{item['path']} · line {item['line']} · {item['rule']}"
+                    for item in scan["findings"][:30]
+                ]
+                if scan["finding_count"] > 30:
+                    lines.append(f"…and {scan['finding_count'] - 30} more finding(s)")
+                answer = QMessageBox.question(
+                    self, "Review possible secrets",
+                    "The selected files contain patterns that may be credentials or private keys. "
+                    "No matched values are shown. Review the locations below.\n\n"
+                    + "\n".join(lines)
+                    + "\n\nContinue only if you intentionally want to include these files. "
+                    "This heuristic scan can miss secrets.",
+                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                    QMessageBox.StandardButton.No,
+                )
+                if answer != QMessageBox.StandardButton.Yes:
+                    return
+            package = export_workspace_project(
+                self.workspace, project_id, Path(source_directory), output_path
+            )
+            QMessageBox.information(
+                self, "Handover created",
+                f"Created {package.name}\n"
+                f"{scan['scanned_files']} files scanned · "
+                f"{scan['finding_count']} potential secret finding(s).",
+            )
+        except (PackageError, ValueError, OSError, LookupError, RuntimeError) as exc:
+            QMessageBox.warning(self, "Could not create handover", str(exc))
 
     def open_package_preview(self) -> None:
         filename, _selected_filter = QFileDialog.getOpenFileName(
