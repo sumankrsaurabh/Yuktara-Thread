@@ -69,6 +69,91 @@ def export_workspace_project(
     return create_package(files_directory, output_file, payload)
 
 
+
+def inspect_workspace_import(
+    workspace: WorkspaceService,
+    package_file: Path,
+) -> dict[str, Any]:
+    """Compare a verified handover with local projects without changing data.
+
+    A matching source project ID or case-insensitive project name identifies
+    candidate destinations. Record collisions are reported by entity type and
+    title; they are advisory and never trigger merge or replacement.
+    """
+    preview = preview_package(package_file)
+    source = preview["project"]
+    source_name = source.get("name")
+    if not isinstance(source_name, str) or not source_name.strip():
+        raise ValueError("Handover project name must be text")
+    source_id = source.get("project_id")
+    if source_id is not None and not isinstance(source_id, str):
+        raise ValueError("Handover source project ID must be text or null")
+
+    projects = workspace.list_projects(include_archived=True)
+    same_name = [
+        project for project in projects
+        if project.name.strip().casefold() == source_name.strip().casefold()
+    ]
+    same_source = [
+        project for project in projects
+        if source_id and project.project_id == source_id
+    ]
+    candidates_by_id = {project.project_id: project for project in (*same_name, *same_source)}
+    candidates = list(candidates_by_id.values())
+
+    collisions: list[dict[str, Any]] = []
+    for project in candidates:
+        for kind in ("decision", "task", "milestone", "reference"):
+            existing = workspace.intelligence.list_records(project.project_id, kind)
+            existing_titles = {
+                str(item.get("title", "")).strip().casefold()
+                for item in existing
+            }
+            incoming = source.get(f"{kind}s", [])
+            if not isinstance(incoming, list):
+                continue
+            matches = sorted({
+                str(item.get("title", "")).strip()
+                for item in incoming
+                if isinstance(item, dict)
+                and isinstance(item.get("title"), str)
+                and item.get("title", "").strip().casefold() in existing_titles
+            }, key=str.casefold)
+            if matches:
+                collisions.append({
+                    "project_id": project.project_id,
+                    "project_name": project.name,
+                    "entity_type": kind,
+                    "titles": matches,
+                })
+
+    return {
+        "valid": True,
+        "source_project_id": source_id,
+        "source_project_name": source_name,
+        "file_count": preview["file_count"],
+        "candidate_projects": [
+            {
+                "project_id": project.project_id,
+                "name": project.name,
+                "status": project.status,
+                "match_reason": (
+                    "source_project_id_and_name"
+                    if project.project_id in {p.project_id for p in same_source}
+                    and project.project_id in {p.project_id for p in same_name}
+                    else "source_project_id"
+                    if project.project_id in {p.project_id for p in same_source}
+                    else "project_name"
+                ),
+            }
+            for project in candidates
+        ],
+        "record_collisions": collisions,
+        "has_conflicts": bool(candidates or collisions),
+        "recommended_action": "review_before_import" if candidates or collisions else "import_as_new",
+        "import_behavior": "Import always creates a new project; no existing data is merged or replaced.",
+    }
+
 def import_workspace_project(
     workspace: WorkspaceService,
     package_file: Path,
