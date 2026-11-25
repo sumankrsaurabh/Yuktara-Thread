@@ -16,7 +16,7 @@ Yuktara Thread is a local-first project continuity and handover platform. It pre
 
 ## Current foundation
 - Python 3.11+; standard-library core.
-- SQLite workspace with ordered transactional migrations.
+- SQLite workspace with ordered transactional migrations, plus consistent local backup and validated restore into a new database file.
 - Project create, read, list, update and archive operations.
 - Structured context sections with revision history and stale-write protection.
 - Decision, task, milestone and reference create/read/update/delete workflows.
