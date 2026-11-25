@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 from dataclasses import asdict
-import json
 from datetime import datetime, timezone
 from pathlib import Path
 import shutil
@@ -248,9 +247,10 @@ def import_workspace_project(
                 },
                 created_at=now,
             )
-        project = workspace.projects.get(project_id)
-        if project is None:
-            raise RuntimeError("Imported project was not found after commit")
+        project = Project(
+            project_id=project_id, name=clean_name, summary=summary.strip(),
+            status="active", created_at=now, updated_at=now, archived_at=None,
+        )
         return project, extracted
     except Exception:
         shutil.rmtree(extracted, ignore_errors=True)
