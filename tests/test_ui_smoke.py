@@ -11,7 +11,7 @@ from PySide6.QtWidgets import QApplication, QFileDialog, QInputDialog, QLabel, Q
 from yuktara_thread.domain.models import ProjectContext
 from yuktara_thread.infrastructure.package import create_package, preview_package
 from yuktara_thread.ui.main_window import (
-    ActivityPanel, EntityEditorDialog, EntityPanel, MainWindow, PackagePreviewDialog, ReadinessPanel, SearchDialog,
+    ActivityPanel, ArchivedProjectsDialog, EntityEditorDialog, EntityPanel, MainWindow, PackagePreviewDialog, ReadinessPanel, SearchDialog,
 )
 
 
@@ -339,5 +339,30 @@ def test_search_dialog_finds_and_opens_matching_project(tmp_path, application):
     dialog.open_selected()
 
     assert opened == [project.project_id]
+    dispose_widget(dialog, application)
+    dispose_widget(window, application)
+
+
+def test_archived_projects_dialog_restores_project_and_refreshes_workspace(
+    tmp_path, application
+):
+    window = MainWindow(tmp_path / "archived-projects.sqlite3")
+    project = window.workspace.create_project("Archived for recovery")
+    window.workspace.intelligence.create_task(project.project_id, title="Keep task")
+    window.workspace.archive_project(project.project_id)
+    window.refresh_projects()
+
+    restored_ids = []
+    dialog = ArchivedProjectsDialog(
+        window.workspace, on_restored=restored_ids.append, parent=window
+    )
+    assert dialog.projects.count() == 1
+    dialog.projects.setCurrentRow(0)
+    dialog.restore_selected()
+
+    assert dialog.projects.count() == 0
+    assert restored_ids == [project.project_id]
+    assert window.projects.count() == 1
+    assert window.workspace.intelligence.list_records(project.project_id, "task")[0]["title"] == "Keep task"
     dispose_widget(dialog, application)
     dispose_widget(window, application)
