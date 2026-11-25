@@ -1,6 +1,6 @@
 # Implementation Status
 
-**Release:** 0.6.2.dev0  
+**Release:** 0.6.3.dev0  
 **Status:** pre-alpha; not production-ready
 
 ## Implemented
@@ -29,6 +29,8 @@
 - [x] Structured desktop forms for decision, task, milestone and reference fields.
 - [x] Offscreen Qt smoke tests covering window startup, structured forms, task prerequisites, project archiving and activity filtering.
 - [x] Desktop package preview dialog with explicit file extraction to a user-selected new folder.
+- [x] Non-destructive handover import inspection: candidate project detection by source ID/name and exact normalized title collisions across decisions, tasks, milestones and references.
+- [x] Desktop warning and explicit confirmation before importing a handover that resembles existing workspace content; import remains import-as-new only.
 - [x] Desktop import of verified handovers into the active workspace.
 - [x] Markdown handover report generated from verified package metadata, file inventory, structured project context and readiness assessment.
 - [x] Deterministic AI-free handover readiness checks in project overview and exported reports.
@@ -51,7 +53,7 @@
 ## Not yet implemented
 - [ ] Complete desktop accessibility and keyboard interaction audit, including screen-reader testing, focus visibility, contrast and platform-specific assistive technology.
 - [ ] Configurable activity page size, background loading and streaming exports; current UI loads fixed pages of 100 and exports the currently loaded, filtered subset.
-- [ ] Import conflict resolution and merge/replace workflows.
+- [ ] Import conflict resolution and merge/replace workflows; current inspection is advisory and import always creates a new project.
 - [ ] Broader secret coverage, configurable exclusions, and independent validation of secret-scan false positives/negatives.
 - [ ] Encryption, signatures and key management.
 - [ ] Local/cloud AI adapters and consent UI.
@@ -59,4 +61,4 @@
 - [ ] Independent security review and interactive release qualification.
 
 ## Verification
-Core tests pass on Python 3.11, 3.12 and 3.13. Offscreen desktop smoke tests and PyInstaller bundle builds passed on Windows, macOS and Linux in run 45603548295. Wheel and source distributions also build and pass Twine metadata checks. The latest accessibility and cursor-pagination changes are undergoing CI verification. Automated CI does not replace interactive manual QA, accessibility validation, signing/notarization or release qualification.
+Core tests pass on Python 3.11, 3.12 and 3.13. Offscreen desktop smoke tests and PyInstaller bundle builds passed on Windows, macOS and Linux in run 45603548295. Wheel and source distributions also build and pass Twine metadata checks. The latest accessibility, cursor-pagination and import-inspection changes are undergoing CI verification. Automated CI does not replace interactive manual QA, accessibility validation, signing/notarization or release qualification.
