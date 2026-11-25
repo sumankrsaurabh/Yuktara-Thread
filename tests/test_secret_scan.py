@@ -55,3 +55,17 @@ def test_scan_requires_existing_directory(tmp_path: Path) -> None:
         assert "existing directory" in str(exc)
     else:
         raise AssertionError("Expected ValueError")
+
+
+def test_scan_detects_generic_password_assignment_without_disclosing_value(tmp_path: Path) -> None:
+    source = tmp_path / "selected"
+    source.mkdir()
+    password = "example-password-value"
+    (source / "config.txt").write_text(
+        f"password={password}", encoding="utf-8"
+    )
+
+    result = scan_selected_files(source)
+
+    assert any(item["rule"] == "generic-secret-assignment" for item in result["findings"])
+    assert password not in repr(result)
