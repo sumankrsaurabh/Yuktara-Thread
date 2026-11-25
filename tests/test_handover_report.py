@@ -63,7 +63,7 @@ def test_report_includes_decision_task_and_dependency_details() -> None:
     })
 
     assert "## Handover readiness" in report
-    assert "85% completeness indicator" in report
+    assert "Completeness indicator: 85%" in report
     assert "references" in report
     assert "## Decisions" in report
     assert "Rationale: Transactional" in report
