@@ -11,7 +11,7 @@ from PySide6.QtWidgets import QApplication, QFileDialog, QInputDialog, QLabel, Q
 from yuktara_thread.domain.models import ProjectContext
 from yuktara_thread.infrastructure.package import create_package, preview_package
 from yuktara_thread.ui.main_window import (
-    ActivityPanel, ArchivedProjectsDialog, DeletedRecordsDialog, EntityEditorDialog, EntityPanel, MainWindow, PackagePreviewDialog, ReadinessPanel, SearchDialog, TaskDependencyGraphDialog,
+    ActivityPanel, ArchivedProjectsDialog, ContextHistoryDialog, DeletedRecordsDialog, EntityEditorDialog, EntityPanel, MainWindow, PackagePreviewDialog, ReadinessPanel, SearchDialog, TaskDependencyGraphDialog,
 )
 
 
@@ -452,3 +452,45 @@ def test_task_dependency_graph_renders_prerequisite_relationships(tmp_path, appl
     assert len(dialog.scene.items()) >= 5
     dispose_widget(dialog, application)
     dispose_widget(window, application)
+
+
+
+def test_context_history_can_restore_previous_revision_as_new_snapshot(tmp_path, application):
+    from yuktara_thread.application.workspace import WorkspaceService
+
+    workspace = WorkspaceService(tmp_path / "context-history-ui.sqlite3")
+    project = workspace.create_project("Context history")
+    section = next(
+        item for item in workspace.get_context(project.project_id)
+        if item.section_key == "goals"
+    )
+    first_content = section.content
+    updated = workspace.save_context(
+        project.project_id, "goals", "Current project goal",
+        expected_revision=section.revision,
+    )
+    restored_revisions = []
+
+    def restore(content):
+        saved = workspace.save_context(
+            project.project_id, "goals", content,
+            expected_revision=updated.revision,
+        )
+        restored_revisions.append(saved.revision)
+        return True
+
+    dialog = ContextHistoryDialog(
+        workspace, project.project_id, "goals", on_restore=restore,
+    )
+    assert dialog.revisions.count() == 2
+    dialog.revisions.setCurrentRow(1)
+    assert dialog.preview.toPlainText() == first_content
+    dialog.restore_selected()
+    current = next(
+        item for item in workspace.get_context(project.project_id)
+        if item.section_key == "goals"
+    )
+    assert current.revision == 3
+    assert current.content == first_content
+    assert restored_revisions == [3]
+    dispose_widget(dialog, application)
