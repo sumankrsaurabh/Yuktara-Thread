@@ -10,6 +10,7 @@ from PySide6.QtWidgets import (
     QPushButton, QPlainTextEdit, QStackedWidget, QTabWidget, QVBoxLayout, QWidget,
 )
 
+from yuktara_thread.application.handover_report import render_handover_report
 from yuktara_thread.application.workspace import WorkspaceService
 from yuktara_thread.infrastructure.package import PackageError, import_package, preview_package
 
@@ -468,13 +469,36 @@ class PackagePreviewDialog(QDialog):
         actions = QHBoxLayout()
         actions.addStretch(1)
         close = QPushButton("Close")
+        report = QPushButton("Save handover report…")
         extract = QPushButton("Extract files…")
         extract.setObjectName("primary")
         close.clicked.connect(self.reject)
+        report.clicked.connect(self.save_report)
         extract.clicked.connect(self.extract_files)
         actions.addWidget(close)
+        actions.addWidget(report)
         actions.addWidget(extract)
         layout.addLayout(actions)
+
+    def save_report(self) -> None:
+        default_name = str(self.preview["project"].get("name") or "handover")
+        safe_name = "".join(
+            character if character.isalnum() or character in " -_." else "-"
+            for character in default_name
+        ).strip(" .") or "handover"
+        filename, _selected_filter = QFileDialog.getSaveFileName(
+            self, "Save handover report", f"{safe_name}-handover.md",
+            "Markdown files (*.md);;Text files (*.txt)",
+        )
+        if not filename:
+            return
+        try:
+            Path(filename).write_text(
+                render_handover_report(self.preview), encoding="utf-8"
+            )
+            QMessageBox.information(self, "Report saved", f"Saved report to:\\n{filename}")
+        except OSError as exc:
+            QMessageBox.warning(self, "Could not save report", str(exc))
 
     def extract_files(self) -> None:
         parent_directory = QFileDialog.getExistingDirectory(
