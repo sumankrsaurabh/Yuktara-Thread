@@ -114,3 +114,96 @@ def test_workspace_export_rejects_archived_project(tmp_path: Path) -> None:
 
     with pytest.raises(ValueError, match="Archived projects"):
         export_workspace_project(workspace, project.project_id, files, tmp_path / "archived.thread")
+
+
+def test_workspace_import_restores_context_records_dependencies_and_files(tmp_path: Path) -> None:
+    from yuktara_thread.application.handover import (
+        export_workspace_project, import_workspace_project,
+    )
+
+    source_workspace = WorkspaceService(tmp_path / "source.sqlite3")
+    source_project = source_workspace.create_project("Portable project", "Transfer this")
+    goals = next(section for section in source_workspace.get_context(source_project.project_id)
+                 if section.section_key == "goals")
+    source_workspace.save_context(
+        source_project.project_id, "goals", "Preserve the reasoning",
+        expected_revision=goals.revision,
+    )
+    source_workspace.intelligence.create_decision(
+        source_project.project_id, title="Use SQLite", alternatives=["JSON", "SQLite"],
+        rationale="Transactions",
+    )
+    prerequisite = source_workspace.intelligence.create_task(
+        source_project.project_id, title="Design schema"
+    )
+    dependent = source_workspace.intelligence.create_task(
+        source_project.project_id, title="Implement storage"
+    )
+    source_workspace.intelligence.add_task_dependency(
+        source_project.project_id, dependent["task_id"], prerequisite["task_id"]
+    )
+    source_workspace.intelligence.create_milestone(
+        source_project.project_id, title="First release"
+    )
+    source_workspace.intelligence.create_reference(
+        source_project.project_id, title="Design notes", uri="docs/design.md"
+    )
+    selected = tmp_path / "selected-files"
+    selected.mkdir()
+    (selected / "README.md").write_text("Portable instructions", encoding="utf-8")
+    package = export_workspace_project(
+        source_workspace, source_project.project_id, selected, tmp_path / "portable.thread"
+    )
+
+    receiving_workspace = WorkspaceService(tmp_path / "receiving.sqlite3")
+    imported, extracted = import_workspace_project(
+        receiving_workspace, package, tmp_path / "received-files"
+    )
+
+    assert imported.name == "Portable project"
+    assert imported.project_id != source_project.project_id
+    assert (extracted / "files" / "README.md").read_text(encoding="utf-8") == "Portable instructions"
+    context = {section.section_key: section.content for section in receiving_workspace.get_context(imported.project_id)}
+    assert context["goals"] == "Preserve the reasoning"
+    decisions = receiving_workspace.intelligence.list_records(imported.project_id, "decision")
+    assert decisions[0]["alternatives"] == ["JSON", "SQLite"]
+    tasks = receiving_workspace.intelligence.list_records(imported.project_id, "task")
+    task_by_title = {task["title"]: task for task in tasks}
+    assert receiving_workspace.intelligence.list_task_dependencies(
+        task_by_title["Implement storage"]["task_id"]
+    ) == [task_by_title["Design schema"]["task_id"]]
+    assert len(receiving_workspace.intelligence.list_records(imported.project_id, "milestone")) == 1
+    assert len(receiving_workspace.intelligence.list_records(imported.project_id, "reference")) == 1
+    assert receiving_workspace.intelligence.timeline(imported.project_id)[0]["event_type"] == "handover.imported"
+
+
+def test_workspace_import_rejects_dependency_cycle_before_extracting(tmp_path: Path) -> None:
+    from yuktara_thread.application.handover import import_workspace_project
+    from yuktara_thread.domain.models import ProjectContext
+    from yuktara_thread.infrastructure.package import create_package
+
+    package_source = tmp_path / "empty"
+    package_source.mkdir()
+    first_id, second_id = "task-one", "task-two"
+    payload = {
+        **ProjectContext.create("Cyclic package").to_dict(),
+        "handover_schema_version": 1,
+        "tasks": [
+            {"task_id": first_id, "title": "One"},
+            {"task_id": second_id, "title": "Two"},
+        ],
+        "task_dependencies": [
+            {"task_id": first_id, "depends_on_task_id": second_id},
+            {"task_id": second_id, "depends_on_task_id": first_id},
+        ],
+    }
+    package = tmp_path / "cycle.thread"
+    create_package(package_source, package, payload)
+    workspace = WorkspaceService(tmp_path / "receiving.sqlite3")
+    destination = tmp_path / "must-not-exist"
+
+    with pytest.raises(ValueError, match="dependency cycle"):
+        import_workspace_project(workspace, package, destination)
+
+    assert workspace.list_projects() == []
+    assert not destination.exists()
