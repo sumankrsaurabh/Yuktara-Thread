@@ -69,6 +69,15 @@ thread project export --database ./workspace.sqlite3 --project-id PROJECT_UUID \
   --files ./selected-handover-files --output ./project-handover.thread
 ```
 
+Before export, the CLI scans selected regular files locally for common credential and private-key patterns. If it finds possible secrets, it prints only file paths, line numbers and rule names, then stops without creating a package. Review the findings and remove secrets where possible. To proceed intentionally after review:
+
+```bash
+thread project export --database ./workspace.sqlite3 --project-id PROJECT_UUID \
+  --files ./selected-handover-files --output ./project-handover.thread \
+  --allow-potential-secrets
+```
+
+The scan is heuristic: it can produce false positives and cannot guarantee that files contain no secrets. It does not print matched values, call a network service or use AI. Files larger than 1 MB, non-UTF-8/binary files and files beyond scan limits are skipped and reported in the scan result.
 Workspace-aware export includes project metadata, all six context sections, decisions, tasks, milestones, references, task prerequisite edges and up to 1,000 recent activity events. It also includes the explicitly selected files. The export does not include the SQLite database, historical context revision bodies or archived projects.
 
 Import a verified workspace handover into a new project. The destination must be a new directory; the import restores project records and extracts package files there:
