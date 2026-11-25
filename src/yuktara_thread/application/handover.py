@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import asdict
+import json
 from datetime import datetime, timezone
 from pathlib import Path
 import shutil
@@ -245,6 +246,40 @@ def import_workspace_project(
     source_events = source.get("activity_events", [])
     if not isinstance(source_events, list) or len(source_events) > 1000:
         raise ValueError("Activity history must contain at most 1,000 events")
+    validated_source_events: list[dict[str, Any]] = []
+    for event in source_events:
+        if not isinstance(event, dict) or set(event) - {
+            "event_id", "event_type", "entity_type", "entity_id", "payload", "created_at",
+        }:
+            raise ValueError("Invalid activity history entry")
+        event_type = event.get("event_type")
+        entity_type = event.get("entity_type")
+        entity_id = event.get("entity_id")
+        payload = event.get("payload", {})
+        created_at = event.get("created_at")
+        if (
+            not isinstance(event_type, str) or not event_type or len(event_type) > 120
+            or not isinstance(entity_type, str) or not entity_type or len(entity_type) > 120
+            or (entity_id is not None and not isinstance(entity_id, str))
+            or not isinstance(payload, dict)
+            or not isinstance(created_at, str) or len(created_at) > 64
+        ):
+            raise ValueError("Invalid activity history fields")
+        try:
+            datetime.fromisoformat(created_at.replace("Z", "+00:00"))
+            payload_json = json.dumps(payload, ensure_ascii=False)
+        except (ValueError, TypeError) as exc:
+            raise ValueError("Activity history contains invalid timestamp or payload") from exc
+        if len(payload_json) > 50_000:
+            raise ValueError("Activity history payload exceeds 50,000 characters")
+        source_event_id = event.get("event_id")
+        if source_event_id is not None and not isinstance(source_event_id, str):
+            raise ValueError("Invalid source activity event ID")
+        validated_source_events.append({
+            "event_id": source_event_id, "event_type": event_type,
+            "entity_type": entity_type, "entity_id": entity_id,
+            "payload": payload, "created_at": created_at,
+        })
 
     extracted = import_package(package_file, files_destination)
     try:
@@ -316,6 +351,26 @@ def import_workspace_project(
                     """INSERT INTO task_dependencies
                        (task_id, depends_on_task_id, created_at) VALUES (?, ?, ?)""",
                     (task_id, prerequisite_id, now),
+                )
+
+            source_project_id = source.get("project_id")
+            for source_event in validated_source_events:
+                imported_payload = dict(source_event["payload"])
+                imported_payload.update({
+                    "_origin": "imported",
+                    "_source_project_id": source_project_id,
+                    "_source_event_id": source_event["event_id"],
+                })
+                connection.execute(
+                    """INSERT INTO project_events
+                       (event_id, project_id, event_type, entity_type, entity_id, payload_json, created_at)
+                       VALUES (?, ?, ?, ?, ?, ?, ?)""",
+                    (
+                        str(uuid4()), project_id, source_event["event_type"],
+                        source_event["entity_type"], source_event["entity_id"],
+                        json.dumps(imported_payload, ensure_ascii=False),
+                        source_event["created_at"],
+                    ),
                 )
 
             append_project_event(
