@@ -156,7 +156,15 @@ thread project import --database ./recipient.sqlite3 \
   --files-destination ./received-project-files
 ```
 
-Database records are restored in one SQLite transaction. If restoration fails after extraction, the newly created files directory is removed. The recipient gets new local project/entity IDs; the source workspace database is never copied. Current import restores the latest context section contents and current project records. It restores the included context revision bodies and replays up to 1,000 validated source activity events. Replayed events retain their original timestamps and are marked as imported in payload metadata; they are not cryptographically authenticated and must not be treated as proof of who performed the original actions.
+Database records are restored in one SQLite transaction. The workspace keeps a durable import journal with the package manifest hash, destination, project ID and import state. Project creation and the `database_committed` journal state are committed atomically. If restoration fails after extraction, the newly created files directory is removed when possible; if cleanup fails, the journal records that manual recovery is required. The recipient gets new local project/entity IDs; the source workspace database is never copied. Current import restores the latest context section contents and current project records. It restores the included context revision bodies and replays up to 1,000 validated source activity events. Replayed events retain their original timestamps and are marked as imported in payload metadata; they are not cryptographically authenticated and must not be treated as proof of who performed the original actions.
+
+Reconcile interrupted workspace imports without deleting files or project data:
+
+```bash
+thread import-recovery --database ./recipient.sqlite3
+```
+
+The command finalizes journal entries when both the imported project and extracted directory exist. If neither exists, it marks the attempt failed. If only one exists, it marks the attempt `recovery_required` and reports the mismatch for manual review. Reconciliation is explicit and safe to repeat; it does not automatically remove directories or project records.
 
 ## Desktop application
 
