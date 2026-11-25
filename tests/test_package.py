@@ -4,7 +4,7 @@ import pytest
 
 from yuktara_thread.domain.models import ProjectContext
 from yuktara_thread.infrastructure.package import (
-    PackageError, create_package, import_package, preview_package, verify_package,
+    PackageError, _safe_archive_name, create_package, import_package, preview_package, verify_package,
 )
 
 
@@ -121,3 +121,21 @@ def test_import_rejects_tampered_package_without_partial_output(tmp_path: Path) 
 
     assert not destination.exists()
     assert not list(tmp_path.glob(".should-not-exist.thread-*"))
+
+
+@pytest.mark.parametrize(
+    "archive_path",
+    [
+        "../outside.txt",
+        "files/../outside.txt",
+        "files//double-separator.txt",
+        "files/CON.txt",
+        "files/LPT1.log",
+        "files/unsafe?.txt",
+        "C:/outside.txt",
+        "files\\\\backslash.txt",
+    ],
+)
+def test_archive_paths_reject_traversal_and_platform_unsafe_names(archive_path: str) -> None:
+    with pytest.raises(PackageError):
+        _safe_archive_name(archive_path)
