@@ -44,6 +44,15 @@ class WorkspaceService:
         """Restore a previously soft-deleted decision, task, milestone or reference."""
         return self.intelligence.restore_record(project_id, entity_type, entity_id)
 
+    def purge_deleted_records(
+        self, project_id: str, entity_type: str, *, older_than_days: int,
+        confirm: bool = False,
+    ) -> dict[str, object]:
+        """Dry-run or explicitly confirm permanent removal of expired records."""
+        return self.intelligence.purge_deleted_records(
+            project_id, entity_type, older_than_days=older_than_days, confirm=confirm
+        )
+
     def get_context(self, project_id: str) -> list[ContextSection]:
         return self.context.list_for_project(project_id)
 
