@@ -36,7 +36,8 @@
 - [x] Read-only layered task dependency graph visualization.
 - [x] Activity date-range filters and JSON/Markdown export.
 - [x] Split desktop presentation into context, panels, dialogs, pages and main-window modules.
-- [ ] Accessibility and keyboard interaction audit.
+- [x] Initial accessible names/descriptions, predictable sidebar tab order and keyboard shortcuts.
+- [ ] Full accessibility audit, screen-reader testing and platform-specific keyboard QA.
 - [x] Workspace-aware package export/import for context, decisions, tasks, milestones, references and task dependencies.
 - [x] Markdown handover report and recipient-side import workflow.
 - [x] Historical context revision-body export/import and desktop revision restore.
