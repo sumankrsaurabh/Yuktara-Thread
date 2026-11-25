@@ -23,7 +23,8 @@ Yuktara Thread is a local-first project continuity and handover platform. It pre
 - Append-only activity events for project, context, intelligence and task dependency changes.
 - Task prerequisite relationships with cycle prevention and audited removal.
 - Versioned ZIP-based `.thread` package creation, integrity verification, non-extracting preview and staged safe file extraction.
-- Workspace-aware handover export for structured context, decisions, tasks, milestones, references, task prerequisites, recent activity and explicitly selected files.
+- Workspace-aware handover export/import for structured context, decisions, tasks, milestones, references, task prerequisites, recent activity counts and explicitly selected files. Import creates fresh local IDs and restores database records in one transaction.
+- Desktop package preview can import a verified handover into the open workspace.
 - Markdown handover report export from a verified package preview.
 - Safe extraction rejects existing destinations, validates manifest metadata and file hashes, and removes staging data on failure.
 - CLI commands for package creation/verification and local workspace/project management.
@@ -71,7 +72,7 @@ Initialize a database with `thread workspace init --database ./workspace.sqlite3
 - `docs`: product, architecture, security and development documentation.
 
 ## Roadmap
-See [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) and [roadmap](docs/product/ROADMAP.md). Next: recipient-side workspace import with transactional restoration, readiness checks and secret-inclusion review.
+See [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) and [roadmap](docs/product/ROADMAP.md). Next: readiness checks, secret-inclusion review, full source activity-history replay and cross-platform packaging.
 
 ## Security
 Package verification checks integrity, not publisher identity. Packages are not encrypted or signed. This project has not undergone an independent security audit. See [SECURITY.md](SECURITY.md) and [threat model](docs/security/THREAT_MODEL.md).
