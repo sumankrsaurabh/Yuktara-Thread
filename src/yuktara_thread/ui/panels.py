@@ -500,15 +500,33 @@ class ActivityPanel(QWidget):
         footer = QHBoxLayout()
         self.filter_status = QLabel("Dates are inclusive. Leave blank for no date bound.")
         self.filter_status.setObjectName("muted")
+        refresh = QPushButton("Refresh")
         export = QPushButton("Export activity…")
         footer.addWidget(self.filter_status, 1)
+        footer.addWidget(refresh)
         footer.addWidget(export)
         layout.addLayout(footer)
+        refresh.clicked.connect(self.refresh_events)
         self.search.textChanged.connect(self.apply_filters)
         self.kind_filter.currentIndexChanged.connect(self.apply_filters)
         self.date_from.textChanged.connect(self.apply_filters)
         self.date_to.textChanged.connect(self.apply_filters)
         export.clicked.connect(self.export_activity)
+        self.apply_filters()
+
+    def refresh_events(self) -> None:
+        selected_type = self.kind_filter.currentData()
+        self.events = self.workspace.intelligence.timeline(self.project_id, limit=500)
+        self.kind_filter.blockSignals(True)
+        self.kind_filter.clear()
+        self.kind_filter.addItem("All activity", "")
+        for event_type in sorted({str(event["event_type"]) for event in self.events}):
+            self.kind_filter.addItem(self.LABELS.get(event_type, event_type), event_type)
+        if selected_type:
+            index = self.kind_filter.findData(selected_type)
+            if index >= 0:
+                self.kind_filter.setCurrentIndex(index)
+        self.kind_filter.blockSignals(False)
         self.apply_filters()
 
     def _description(self, event: dict) -> str:
