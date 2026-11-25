@@ -10,7 +10,9 @@ from PySide6.QtWidgets import (
     QVBoxLayout, QWidget,
 )
 
-from yuktara_thread.application.handover import export_workspace_project, import_workspace_project
+from yuktara_thread.application.handover import (
+    export_workspace_project, import_workspace_project, inspect_workspace_import,
+)
 from yuktara_thread.application.handover_report import render_handover_report
 from yuktara_thread.application.search import search_workspace
 from yuktara_thread.application.workspace import WorkspaceService
@@ -158,6 +160,45 @@ class PackagePreviewDialog(QDialog):
     def import_to_workspace(self) -> None:
         if self.workspace is None:
             return
+        try:
+            inspection = inspect_workspace_import(self.workspace, self.package_path)
+        except (PackageError, ValueError, OSError) as exc:
+            QMessageBox.warning(self, "Could not inspect import", str(exc))
+            return
+        candidates = inspection["candidate_projects"]
+        collisions = inspection["record_collisions"]
+        details = []
+        if candidates:
+            details.append(
+                "Possible matching project(s): "
+                + ", ".join(
+                    f"{item['name']} ({item['status']}; {item['match_reason'].replace('_', ' ')})"
+                    for item in candidates
+                )
+            )
+        if collisions:
+            details.append(
+                "Matching record titles: "
+                + "; ".join(
+                    f"{item['entity_type']}: {', '.join(item['titles'])}"
+                    for item in collisions
+                )
+            )
+        if details:
+            message = (
+                "This package resembles existing workspace content.\n\n"
+                + "\n".join(details)
+                + "\n\nImport will still create a separate project. "
+                "No existing records will be merged, changed or replaced. "
+                "Continue?"
+            )
+            choice = QMessageBox.warning(
+                self, "Potential import conflicts", message,
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel,
+                QMessageBox.StandardButton.Cancel,
+            )
+            if choice != QMessageBox.StandardButton.Yes:
+                return
         parent_directory = QFileDialog.getExistingDirectory(
             self, "Choose destination parent directory for package files"
         )
