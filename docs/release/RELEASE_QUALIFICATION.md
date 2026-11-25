@@ -67,4 +67,12 @@ If the error reports that the extracted files could not be removed automatically
 3. Inspect the exact recovery directory reported by the error. Preserve any files you need, then remove the directory or move it aside.
 4. Retry the import using a new, empty destination directory.
 
-If the process or machine loses power between publishing the extracted directory and committing the database transaction, this version does not have a durable import journal to reconcile that interruption automatically. Check the workspace and destination directory manually before retrying. Never delete an existing destination unless you have confirmed it belongs to the failed import.
+The workspace now keeps a durable import journal. Run:
+
+```bash
+thread import-recovery --database /path/to/workspace.sqlite3
+```
+
+The command reconciles interrupted imports without deleting project rows or files. If both the imported project and its destination directory exist, the journal is finalized as completed. If neither exists, the attempt is marked failed. If only one exists, the attempt is marked recovery_required and the output identifies the mismatch for manual review. Reconciliation is explicit; it is not run automatically at application startup.
+
+The journal transition to database_committed is committed in the same SQLite transaction as project creation. This prevents a successfully committed project from being misclassified as an uncommitted attempt after a crash. File extraction and the database transaction remain separate filesystem/database operations, so a mismatch still requires operator review. Never delete an existing destination unless you have confirmed it belongs to the failed import.
