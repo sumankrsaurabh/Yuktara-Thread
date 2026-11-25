@@ -42,7 +42,8 @@
 - [x] CLI `preview` and `import` commands for verified packages.
 - [x] CLI `project export` and `project import` for workspace-aware handover round trips.
 - [x] Package tests for successful extraction, tamper rejection, existing destinations and unsafe paths.
-- [x] Dedicated Linux desktop CI job; PySide6 6.9 runtime smoke tests pass without shutdown errors.
+- [x] Linux offscreen PySide6 runtime smoke tests pass without shutdown errors.
+- [x] CI matrix added for Windows, macOS and Linux platform smoke tests, plus wheel/sdist build validation (first full matrix run pending).
 - [x] Automated core tests and GitHub Actions Python 3.11–3.13 matrix.
 
 ## Not yet implemented
@@ -63,4 +64,4 @@
 - [ ] Independent security review and release qualification.
 
 ## Verification
-Core automated tests pass on Python 3.11, 3.12 and 3.13. Linux offscreen desktop smoke tests pass with the supported PySide6 6.9 series. Package transfer tests cover preview, successful extraction, tamper rejection and existing-destination preservation. Latest verification is tracked in GitHub Actions for each pushed commit. The 0.5.3 desktop recovery, activity export and dependency-graph changes require the current CI run to complete before they are considered verified. This does not replace Windows/macOS runtime testing, interactive manual QA, accessibility validation or release qualification.
+Core automated tests pass on Python 3.11, 3.12 and 3.13. Linux offscreen desktop smoke tests pass with the supported PySide6 6.9 series. A Windows/macOS/Linux platform smoke matrix and wheel/sdist validation have been added and require a successful CI run. Package transfer tests cover preview, successful extraction, tamper rejection and existing-destination preservation. Latest verification is tracked in GitHub Actions for each pushed commit. The 0.5.3 desktop recovery, activity export and dependency-graph changes require the current CI run to complete before they are considered verified. This does not replace Windows/macOS runtime testing, interactive manual QA, accessibility validation or release qualification.
