@@ -33,8 +33,8 @@
 
 ## Planned mitigations
 
-- Local heuristic scanning for common credential/private-key patterns before workspace export; explicit user acknowledgement is required to proceed when findings exist.
-- Import conflict resolution, merge/replace workflows and full source activity-history replay.
+- Broader secret-pattern coverage, configurable exclusions and independent scanner validation.
+- Import conflict resolution and merge/replace workflows.
 - Explicit provider/data/retention consent before AI transfer.
 - Optional authenticated encryption and digital signatures using established libraries.
 - Security tests, dependency review and external assessment.
