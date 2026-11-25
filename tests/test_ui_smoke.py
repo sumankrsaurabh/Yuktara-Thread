@@ -277,7 +277,7 @@ def test_handover_export_requires_secret_review_confirmation(
     window.create_handover_package()
 
     assert package.is_file()
-    assert prompts and "ACCESS_TOKEN" in prompts[0]
+    assert prompts and "settings.txt" in prompts[0] and "github-token" in prompts[0]
     assert token not in prompts[0]
     assert messages and "potential secret finding(s)" in messages[0]
     dispose_widget(window, application)
