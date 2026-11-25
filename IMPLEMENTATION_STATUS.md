@@ -18,7 +18,8 @@
 
 ## Not yet implemented
 - [ ] Entity-specific soft-delete/restore policy and event retention/export policy.
-- [ ] Desktop UI and design system.
+- [x] Initial PySide6 desktop shell with project navigation, context editor, intelligence list workflows and activity timeline.
+- [ ] Desktop UI design-system refinement, accessibility and interaction polish.
 - [ ] Package preview and safe transactional import.
 - [ ] Human-readable handover report and readiness scoring.
 - [ ] Search, backup and recovery workflows.
