@@ -22,9 +22,10 @@ Yuktara Thread is a local-first project continuity and handover platform. It pre
 - Decision, task, milestone and reference create/read/update/delete workflows.
 - Append-only activity events for project, context, intelligence and task dependency changes.
 - Task prerequisite relationships with cycle prevention and audited removal.
-- Versioned ZIP-based `.thread` package creation and verification.
+- Versioned ZIP-based `.thread` package creation, integrity verification, non-extracting preview and staged safe file extraction.
+- Safe extraction rejects existing destinations, validates manifest metadata and file hashes, and removes staging data on failure.
 - CLI commands for package creation/verification and local workspace/project management.
-- Optional PySide6 desktop shell (`.[desktop]`) with project navigation, context editing, intelligence lists and activity history.
+- Optional PySide6 6.9 desktop shell (`.[desktop]`) with project editing/archive, context editing, structured intelligence forms, task prerequisites, searchable activity and verified package preview/extraction.
 - Automated tests and GitHub Actions CI matrix.
 
 ## Quick start
@@ -68,7 +69,7 @@ Initialize a database with `thread workspace init --database ./workspace.sqlite3
 - `docs`: product, architecture, security and development documentation.
 
 ## Roadmap
-See [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) and [roadmap](docs/product/ROADMAP.md). Next: package import preview, handover report, readiness checks and the desktop UI.
+See [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) and [roadmap](docs/product/ROADMAP.md). Next: workspace-aware package serialization (context, decisions, tasks, milestones and references), handover report and readiness checks.
 
 ## Security
 Package verification checks integrity, not publisher identity. Packages are not encrypted or signed. This project has not undergone an independent security audit. See [SECURITY.md](SECURITY.md) and [threat model](docs/security/THREAT_MODEL.md).
