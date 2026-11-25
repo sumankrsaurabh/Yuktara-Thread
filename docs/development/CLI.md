@@ -1,6 +1,6 @@
 # Command-Line Interface
 
-The CLI is a lightweight way to exercise package and workspace workflows before the desktop UI is available.
+The CLI is a lightweight way to exercise package and workspace workflows.
 
 ## Package commands
 
@@ -59,11 +59,13 @@ thread desktop --database ./workspace.sqlite3
 
 The equivalent dedicated launcher is `thread-desktop --database ./workspace.sqlite3`. The database path is explicit; the application does not silently create a hidden workspace.
 
-The initial desktop shell includes project selection and creation, structured context editing with revision conflict protection, decision/task/milestone/reference lists with basic create/rename/delete actions, and the project activity timeline. It is an early UI foundation; keyboard accessibility, advanced forms, responsive layouts, package import/export workflows and installer validation remain future work.
+The current desktop foundation includes project selection and creation, six structured context editors with revision conflict protection, and tabs for decisions, tasks, milestones, references and project activity. Each intelligence tab supports create, edit and delete; the forms expose the structured fields stored by the domain layer. Deletions are recorded in project history.
+
+The UI remains pre-alpha. Project metadata/archive controls, dependency editing and visualization, detailed activity presentation, keyboard/accessibility validation, package preview/import/export and installer validation are not complete.
 
 ## Notes
 
 - The database path is selected by the user; no hidden default workspace is created.
 - Workspace commands are local-only and do not make network requests.
-- Context editing is currently available through the Python application service, not yet through CLI commands.
+- Context editing is currently available through the Python application service and desktop UI, not yet through CLI commands.
 - CLI output is JSON for machine-readable project and workspace results.
