@@ -165,6 +165,68 @@ def test_package_output_must_not_be_inside_selected_files_directory(tmp_path: Pa
         )
 
 
+@pytest.mark.parametrize(
+    "names",
+    [
+        ["files/Report.txt", "files/report.txt"],
+        ["files/café.txt", "files/cafe\u0301.txt"],
+        ["files/a", "files/a/child.txt"],
+    ],
+)
+def test_package_rejects_portable_path_collisions(tmp_path: Path, names: list[str]) -> None:
+    import hashlib
+    import json
+    import zipfile
+
+    payloads = {name: b"same" for name in names}
+    manifest = {
+        "format": "yuktara.thread",
+        "format_version": 1,
+        "project": {"name": "Collision test"},
+        "files": [
+            {"path": name, "size": len(data), "sha256": hashlib.sha256(data).hexdigest()}
+            for name, data in payloads.items()
+        ],
+    }
+    package = tmp_path / "colliding.thread"
+    with zipfile.ZipFile(package, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+        archive.writestr("manifest.json", json.dumps(manifest))
+        for name, data in payloads.items():
+            archive.writestr(name, data)
+
+    with pytest.raises(PackageError, match="collid|conflicts"):
+        verify_package(package)
+
+
+def test_package_rejects_duplicate_json_manifest_keys(tmp_path: Path) -> None:
+    import zipfile
+
+    package = tmp_path / "duplicate-keys.thread"
+    manifest = (
+        '{"format":"wrong","format":"yuktara.thread",'
+        '"format_version":1,"project":{"name":"Duplicate key"},"files":[]}'
+    )
+    with zipfile.ZipFile(package, "w") as archive:
+        archive.writestr("manifest.json", manifest)
+
+    with pytest.raises(PackageError, match="Duplicate JSON object key"):
+        verify_package(package)
+
+
+def test_package_rejects_nonstandard_json_numbers(tmp_path: Path) -> None:
+    import zipfile
+
+    package = tmp_path / "nonstandard-number.thread"
+    manifest = (
+        '{"format":"yuktara.thread","format_version":1,'
+        '"project":{"name":"Invalid","score":NaN},"files":[]}'
+    )
+    with zipfile.ZipFile(package, "w") as archive:
+        archive.writestr("manifest.json", manifest)
+
+    with pytest.raises(PackageError, match="Non-standard JSON"):
+        verify_package(package)
+
 def test_package_rejects_non_json_project_metadata(tmp_path: Path) -> None:
     source = tmp_path / "source"
     source.mkdir()
