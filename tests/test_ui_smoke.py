@@ -17,6 +17,13 @@ def application():
     yield app
 
 
+def dispose_widget(widget, application):
+    widget.close()
+    widget.deleteLater()
+    QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
+    application.processEvents()
+
+
 def test_main_window_loads_and_opens_project(tmp_path, application):
     database = tmp_path / "desktop-smoke.sqlite3"
     window = MainWindow(database)
@@ -37,10 +44,7 @@ def test_main_window_loads_and_opens_project(tmp_path, application):
         "Milestones", "References", "Activity",
     ]
 
-    window.close()
-    window.deleteLater()
-    QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
-    application.processEvents()
+    dispose_widget(window, application)
 
 
 def test_decision_editor_preserves_structured_fields(application):
@@ -56,9 +60,7 @@ def test_decision_editor_preserves_structured_fields(application):
     assert values["problem"] == "Where should local data live?"
     assert values["alternatives"] == ["JSON files", "SQLite"]
     assert values["status"] == "proposed"
-    dialog.close()
-    dialog.deleteLater()
-    QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
+    dispose_widget(dialog, application)
 
 
 def test_task_dependency_controls_use_audited_service(tmp_path, application):
@@ -98,8 +100,7 @@ def test_task_dependency_controls_use_audited_service(tmp_path, application):
 
     panel.remove_dependency()
     assert window.workspace.intelligence.list_task_dependencies(dependent["task_id"]) == []
-    window.close()
-    application.processEvents()
+    dispose_widget(window, application)
 
 
 def test_archive_control_archives_project_and_removes_it_from_active_list(
