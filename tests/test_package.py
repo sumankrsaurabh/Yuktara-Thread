@@ -151,3 +151,25 @@ def test_import_rejects_platform_unsafe_destination_name(tmp_path: Path) -> None
         import_package(package, tmp_path / "bad:name")
 
     assert not (tmp_path / "bad:name").exists()
+
+
+def test_package_output_must_not_be_inside_selected_files_directory(tmp_path: Path) -> None:
+    source = tmp_path / "source"
+    source.mkdir()
+    (source / "README.md").write_text("Project file", encoding="utf-8")
+
+    with pytest.raises(PackageError, match="outside the selected files directory"):
+        create_package(
+            source, source / "handover.thread",
+            ProjectContext.create("Unsafe output").to_dict(),
+        )
+
+
+def test_package_rejects_non_json_project_metadata(tmp_path: Path) -> None:
+    source = tmp_path / "source"
+    source.mkdir()
+
+    with pytest.raises(PackageError, match="not valid JSON"):
+        create_package(source, tmp_path / "invalid.thread", {"name": float("nan")})
+
+    assert not (tmp_path / "invalid.thread").exists()
