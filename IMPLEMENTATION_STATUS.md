@@ -28,6 +28,7 @@
 - [x] Deterministic AI-free handover readiness checks in project overview and exported reports.
 - [x] Local bounded secret-pattern scan before CLI and desktop export; findings do not reveal matched values and require explicit acknowledgement.
 - [x] SQLite online backup and validated restore to a new database path, with no-overwrite publication in CLI and desktop.
+- [x] Bounded local search across project summaries, context, decisions, tasks, milestones and references, with archived-project filtering.
 - [x] Workspace-aware package export for context sections, decisions, tasks, milestones, references, task dependencies and recent activity.
 - [x] CLI command for workspace-aware project export with an explicit selected-files directory.
 - [x] Recipient-side workspace import with new local IDs, context/record restoration and task dependency remapping.
