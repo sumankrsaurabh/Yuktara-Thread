@@ -547,3 +547,27 @@ def test_workspace_accessibility_names_and_keyboard_shortcuts(tmp_path, applicat
     assert task_panel.prerequisite_picker.accessibleName() == "Choose prerequisite task"
 
     dispose_widget(window, application)
+
+
+def test_activity_panel_loads_older_events_incrementally(tmp_path, application):
+    from yuktara_thread.application.workspace import WorkspaceService
+
+    workspace = WorkspaceService(tmp_path / "activity-pagination.sqlite3")
+    project = workspace.create_project("Activity pagination")
+    for index in range(ActivityPanel.PAGE_SIZE + 5):
+        workspace.intelligence.create_task(project.project_id, title=f"Task {index}")
+
+    panel = ActivityPanel(workspace, project.project_id)
+    assert len(panel.events) == ActivityPanel.PAGE_SIZE
+    assert panel.has_more is True
+    assert panel.load_older.isEnabled()
+
+    first_page_ids = {event["event_id"] for event in panel.events}
+    panel.load_older_events()
+
+    assert len(panel.events) == ActivityPanel.PAGE_SIZE + 6
+    assert first_page_ids.issubset({event["event_id"] for event in panel.events})
+    assert panel.has_more is False
+    assert not panel.load_older.isEnabled()
+    assert panel.list.count() == ActivityPanel.PAGE_SIZE + 6
+    dispose_widget(panel, application)
