@@ -186,6 +186,30 @@ class PackagePreviewDialog(QDialog):
                     for item in collisions
                 )
             )
+        for comparison in inspection.get("comparisons", []):
+            differences = []
+            if comparison["project_summary_differs"]:
+                differences.append("project summary differs")
+            differences.extend(
+                f"context '{item['section_key']}' {item['change'].replace('_', ' ')}"
+                for item in comparison["context_differences"]
+            )
+            if differences:
+                details.append(
+                    f"Comparison with {comparison['project_name']}: "
+                    + "; ".join(differences)
+                )
+            counts = comparison["source_counts"]
+            local_counts = comparison["destination_counts"]
+            differing_counts = [
+                f"{kind}: package {counts[kind]}, local {local_counts[kind]}"
+                for kind in counts if counts[kind] != local_counts[kind]
+            ]
+            if differing_counts:
+                details.append(
+                    f"Record count differences for {comparison['project_name']}: "
+                    + "; ".join(differing_counts)
+                )
         if details:
             message = (
                 "This package resembles existing workspace content.\n\n"
