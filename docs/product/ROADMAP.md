@@ -20,7 +20,9 @@
 - [ ] Search, backup and recovery.
 
 ## P3 — Desktop MVP
-- [ ] PySide6 desktop shell and design system.
+- [x] Initial PySide6 desktop shell and workspace navigation.
+- [x] Context editor, intelligence list workflows and activity timeline.
+- [ ] Desktop design-system refinement and accessibility.
 - [ ] Project overview, context editor and intelligence screens.
 - [ ] Package preview, safe import and handover report.
 - [ ] Secret inclusion warnings and readiness checks.
