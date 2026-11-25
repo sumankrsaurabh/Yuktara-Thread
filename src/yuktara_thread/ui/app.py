@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import sqlite3
 from pathlib import Path
 import sys
 
@@ -54,7 +55,11 @@ def run(database_path: Path | None = None) -> int:
             return 0
         database_path = Path(filename)
 
-    window = MainWindow(database_path)
+    try:
+        window = MainWindow(database_path)
+    except (OSError, RuntimeError, ValueError, sqlite3.Error) as exc:
+        QMessageBox.critical(None, "Could not open workspace", str(exc))
+        return 2
     window.show()
     return application.exec()
 
