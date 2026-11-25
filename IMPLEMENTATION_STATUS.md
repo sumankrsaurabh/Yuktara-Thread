@@ -44,24 +44,18 @@
 - [x] Package tests for successful extraction, tamper rejection, existing destinations and unsafe paths.
 - [x] Linux offscreen PySide6 runtime smoke tests pass without shutdown errors.
 - [x] Windows, macOS and Linux platform smoke-test matrix, portable PyInstaller bundle builds and wheel/sdist validation.
-- [x] Automated core tests and GitHub Actions Python 3.11–3.13 matrix.\n- [x] Portable unsigned desktop bundles built successfully on Windows, macOS and Linux in CI.
+- [x] Automated core tests and GitHub Actions Python 3.11–3.13 matrix.
+- [x] Portable unsigned desktop bundles built successfully on Windows, macOS and Linux in CI.
 
 ## Not yet implemented
-- [x] Explicit, dry-run-first soft-delete retention purge with a permanent audit event; activity events are retained indefinitely by default and can be exported.
-- [ ] Desktop design-system refinement, accessibility and keyboard interaction audit.
-
-- [x] Read-only layered task dependency graph in the desktop Tasks tab.
-
-- [x] Historical context revision-body export/import and desktop revision inspection/restoration as a new snapshot.
+- [ ] Desktop accessibility and keyboard interaction audit.
 - [ ] Configurable activity-history limits and paginated exports.
-- [x] Replay up to 1,000 validated source activity events on import, clearly marking them as imported/unverified.
 - [ ] Import conflict resolution and merge/replace workflows.
 - [ ] Broader secret coverage, configurable exclusions, and independent validation of secret-scan false positives/negatives.
-
 - [ ] Encryption, signatures and key management.
 - [ ] Local/cloud AI adapters and consent UI.
-- [ ] Windows, Linux and macOS installers.
-- [ ] Independent security review and release qualification.
+- [ ] Signed Windows, macOS and Linux installers.
+- [ ] Independent security review and interactive release qualification.
 
 ## Verification
 Core tests pass on Python 3.11, 3.12 and 3.13. Offscreen desktop smoke tests and PyInstaller bundle builds passed on Windows, macOS and Linux in run 45603548295. Wheel and source distributions also build and pass Twine metadata checks. The modular UI refactor and activity refresh change are undergoing a newer CI run. Automated CI does not replace interactive manual QA, accessibility validation, signing/notarization or release qualification.
