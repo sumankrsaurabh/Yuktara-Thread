@@ -142,3 +142,34 @@ def test_project_export_requires_explicit_override_for_potential_secrets(tmp_pat
     exported = json.loads(capsys.readouterr().out)
     assert exported["exported"] is True
     assert package.is_file()
+
+
+def test_workspace_backup_and_restore_cli(tmp_path: Path, capsys) -> None:
+    database = tmp_path / "cli-backup-source.sqlite3"
+    assert main(["workspace", "init", "--database", str(database)]) == 0
+    capsys.readouterr()
+    assert main([
+        "project", "create", "--database", str(database), "--name", "Backup CLI",
+        "--summary", "Snapshot test",
+    ]) == 0
+    project = json.loads(capsys.readouterr().out)
+    backup = tmp_path / "workspace.backup"
+
+    assert main([
+        "workspace", "backup", "--database", str(database),
+        "--output", str(backup),
+    ]) == 0
+    backup_result = json.loads(capsys.readouterr().out)
+    assert backup_result["backed_up"] is True
+
+    restored_path = tmp_path / "restored.sqlite3"
+    assert main([
+        "workspace", "restore", "--backup", str(backup),
+        "--database", str(restored_path),
+    ]) == 0
+    restored_result = json.loads(capsys.readouterr().out)
+    assert restored_result["restored"] is True
+
+    from yuktara_thread.application.workspace import WorkspaceService
+    restored = WorkspaceService(restored_path)
+    assert restored.projects.get(project["project_id"]).name == "Backup CLI"
