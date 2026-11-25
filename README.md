@@ -26,6 +26,7 @@ Yuktara Thread is a local-first project continuity and handover platform. It pre
 - Versioned ZIP-based `.thread` package creation, integrity verification, non-extracting preview and staged safe file extraction.
 - Workspace-aware handover export/import for structured context and revision bodies, decisions, tasks, milestones, references, task prerequisites, up to 1,000 activity events and explicitly selected files. Import creates fresh local IDs, restores context history, replays source activity as clearly marked imported/unverified events and restores records in one transaction.
 - Desktop package preview can import a verified handover into the open workspace.
+- Desktop handover import recovery dialog inspects incomplete journal entries and explicitly reconciles stale states without deleting files or project records.
 - Markdown handover report export from a verified package preview, including decisions, tasks, dependencies and readiness assessment.
 - Deterministic AI-free readiness checks on the project overview; checks distinguish required context from recommended detail.
 - Local heuristic secret scan before handover export; flagged exports require explicit user acknowledgement, and matched values are never displayed.

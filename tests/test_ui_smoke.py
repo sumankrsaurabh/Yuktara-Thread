@@ -11,7 +11,7 @@ from PySide6.QtWidgets import QApplication, QFileDialog, QInputDialog, QLabel, Q
 from yuktara_thread.domain.models import ProjectContext
 from yuktara_thread.infrastructure.package import create_package, preview_package
 from yuktara_thread.ui.main_window import (
-    ActivityPanel, ArchivedProjectsDialog, ContextHistoryDialog, DeletedRecordsDialog, EntityEditorDialog, EntityPanel, MainWindow, PackagePreviewDialog, ReadinessPanel, SearchDialog, TaskDependencyGraphDialog,
+    ActivityPanel, ArchivedProjectsDialog, ContextHistoryDialog, DeletedRecordsDialog, EntityEditorDialog, EntityPanel, ImportRecoveryDialog, MainWindow, PackagePreviewDialog, ReadinessPanel, SearchDialog, TaskDependencyGraphDialog,
 )
 
 
@@ -571,3 +571,107 @@ def test_activity_panel_loads_older_events_incrementally(tmp_path, application):
     assert not panel.load_older.isEnabled()
     assert panel.list.count() == ActivityPanel.PAGE_SIZE + 6
     dispose_widget(panel, application)
+
+
+
+def test_import_recovery_dialog_reconciles_without_deleting_files_or_projects(
+    tmp_path, application, monkeypatch
+):
+    from datetime import datetime, timedelta, timezone
+
+    from yuktara_thread.application.workspace import WorkspaceService
+
+    workspace = WorkspaceService(tmp_path / "import-recovery-ui.sqlite3")
+    project = workspace.create_project("Committed import")
+    committed_files = tmp_path / "committed-import-files"
+    committed_files.mkdir()
+    orphan_files = tmp_path / "orphan-import-files"
+    orphan_files.mkdir()
+    old = (datetime.now(timezone.utc) - timedelta(minutes=10)).isoformat()
+
+    with workspace.database.transaction() as connection:
+        connection.execute(
+            """INSERT INTO handover_imports
+               (import_id, project_id, package_manifest_sha256, destination_path,
+                status, phase, error, created_at, updated_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (
+                "committed-import", project.project_id, "a" * 64,
+                str(committed_files), "database_committed",
+                "database_committed", None, old, old,
+            ),
+        )
+        connection.execute(
+            """INSERT INTO handover_imports
+               (import_id, project_id, package_manifest_sha256, destination_path,
+                status, phase, error, created_at, updated_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (
+                "orphan-import", "missing-project-id", "b" * 64,
+                str(orphan_files), "files_ready", "files_ready",
+                "interrupted before database commit", old, old,
+            ),
+        )
+
+    monkeypatch.setattr(
+        QMessageBox, "question",
+        lambda *args, **kwargs: QMessageBox.StandardButton.Yes,
+    )
+    dialog = ImportRecoveryDialog(workspace)
+    assert dialog.records.count() == 2
+    assert "Package manifest SHA-256" in dialog.details.toPlainText()
+
+    dialog.reconcile()
+
+    with workspace.database.read() as connection:
+        states = {
+            row["import_id"]: row["status"]
+            for row in connection.execute(
+                "SELECT import_id, status FROM handover_imports"
+            ).fetchall()
+        }
+    assert states == {
+        "committed-import": "completed",
+        "orphan-import": "recovery_required",
+    }
+    assert workspace.projects.get(project.project_id) is not None
+    assert committed_files.is_dir()
+    assert orphan_files.is_dir()
+    assert dialog.records.count() == 1
+    assert "Manual review required" in dialog.details.toPlainText()
+    dispose_widget(dialog, application)
+
+
+def test_import_recovery_dialog_skips_recent_imports(tmp_path, application, monkeypatch):
+    from datetime import datetime, timezone
+
+    from yuktara_thread.application.workspace import WorkspaceService
+
+    workspace = WorkspaceService(tmp_path / "recent-import-recovery.sqlite3")
+    now = datetime.now(timezone.utc).isoformat()
+    with workspace.database.transaction() as connection:
+        connection.execute(
+            """INSERT INTO handover_imports
+               (import_id, project_id, package_manifest_sha256, destination_path,
+                status, phase, error, created_at, updated_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (
+                "recent-import", "not-yet-created", "c" * 64,
+                str(tmp_path / "recent-files"), "extracting",
+                "file_extraction", None, now, now,
+            ),
+        )
+    monkeypatch.setattr(
+        QMessageBox, "question",
+        lambda *args, **kwargs: QMessageBox.StandardButton.Yes,
+    )
+    dialog = ImportRecoveryDialog(workspace)
+    dialog.reconcile()
+    with workspace.database.read() as connection:
+        status = connection.execute(
+            "SELECT status FROM handover_imports WHERE import_id = ?",
+            ("recent-import",),
+        ).fetchone()["status"]
+    assert status == "extracting"
+    assert dialog.records.count() == 1
+    dispose_widget(dialog, application)

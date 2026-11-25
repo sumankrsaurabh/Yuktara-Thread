@@ -2,6 +2,16 @@
 
 All notable changes to Yuktara Thread are documented here. Development versions may change before a stable release.
 
+## 0.6.7.dev0 — 2026-11-25
+
+### Added
+- Desktop handover import recovery dialog lists incomplete journal entries with phase, package manifest hash, destination, timestamps, recorded errors and safe recovery guidance.
+- Explicit operator-triggered reconciliation is protected by the five-minute stale-entry window and clearly states that it does not delete files, remove projects, overwrite data or retry imports.
+- Regression tests cover committed import finalization, orphaned destination retention, manual-review status and protection of recent active imports.
+
+### Limitations
+- The recovery UI is a journal inspector and non-destructive reconciliation control. Mismatched project/files states still require manual operator review; no automatic cleanup or retry is provided.
+
 ## 0.6.6.dev0 — 2026-11-25
 
 ### Added

@@ -12,6 +12,7 @@ from PySide6.QtWidgets import (
 
 from yuktara_thread.application.handover import (
     export_workspace_project, import_workspace_project, inspect_workspace_import,
+    list_incomplete_workspace_imports, reconcile_workspace_imports,
 )
 from yuktara_thread.application.handover_report import render_handover_report
 from yuktara_thread.application.search import search_workspace
@@ -316,6 +317,182 @@ class PackagePreviewDialog(QDialog):
             )
         except (PackageError, OSError, ValueError) as exc:
             QMessageBox.warning(self, "Could not extract package", str(exc))
+
+
+class ImportRecoveryDialog(QDialog):
+    """Inspect and explicitly reconcile interrupted workspace handover imports."""
+
+    STALE_AFTER_SECONDS = 300
+
+    def __init__(self, workspace: WorkspaceService, parent=None) -> None:
+        super().__init__(parent)
+        self.workspace = workspace
+        self.entries: list[dict] = []
+        self.setWindowTitle("Handover import recovery")
+        self.setAccessibleName("Handover import recovery")
+        self.setMinimumSize(720, 500)
+
+        layout = QVBoxLayout(self)
+        intro = QLabel(
+            "Review interrupted imports recorded by this workspace. Reconciliation "
+            "updates journal status only; it never deletes files or project records."
+        )
+        intro.setWordWrap(True)
+        intro.setObjectName("muted")
+        layout.addWidget(intro)
+
+        self.records = QListWidget()
+        self.records.setAccessibleName("Incomplete handover imports")
+        self.records.setAccessibleDescription(
+            "Select an import to inspect its status, destination and recovery guidance."
+        )
+        self.records.currentRowChanged.connect(self.show_selected)
+        layout.addWidget(self.records, 1)
+
+        self.details = QPlainTextEdit()
+        self.details.setReadOnly(True)
+        self.details.setAccessibleName("Selected import recovery details")
+        self.details.setMinimumHeight(150)
+        layout.addWidget(self.details)
+
+        self.status = QLabel("")
+        self.status.setObjectName("muted")
+        self.status.setWordWrap(True)
+        layout.addWidget(self.status)
+
+        actions = QHBoxLayout()
+        actions.addStretch(1)
+        self.refresh_button = QPushButton("Refresh list")
+        self.refresh_button.setAccessibleName("Refresh incomplete imports")
+        self.reconcile_button = QPushButton("Reconcile stale imports…")
+        self.reconcile_button.setAccessibleName("Reconcile stale imports")
+        self.reconcile_button.setObjectName("primary")
+        close = QPushButton("Close")
+        self.refresh_button.clicked.connect(self.refresh)
+        self.reconcile_button.clicked.connect(self.reconcile)
+        close.clicked.connect(self.reject)
+        actions.addWidget(self.refresh_button)
+        actions.addWidget(self.reconcile_button)
+        actions.addWidget(close)
+        layout.addLayout(actions)
+        self.refresh()
+
+    @staticmethod
+    def _recommendation(entry: dict) -> str:
+        status = entry.get("status")
+        if status == "recovery_required":
+            return (
+                "Manual review required. Compare the project record with the destination "
+                "directory. Do not delete either side until you have verified its contents."
+            )
+        if status == "database_committed":
+            return (
+                "The project transaction committed. Confirm the destination directory exists, "
+                "then reconcile after the five-minute safety window."
+            )
+        if status in {"started", "extracting", "files_ready"}:
+            return (
+                "This may be an interrupted import. Reconciliation checks the project and "
+                "destination after the five-minute safety window; it does not remove either."
+            )
+        return "Inspect the project and destination before taking any manual action."
+
+    def refresh(self) -> None:
+        selected_id = None
+        current = self.records.currentItem()
+        if current is not None:
+            selected_id = current.data(Qt.ItemDataRole.UserRole)
+        self.entries = list_incomplete_workspace_imports(self.workspace)
+        self.records.clear()
+        selected_row = -1
+        for index, entry in enumerate(self.entries):
+            label = (
+                f"{entry['status']} · {entry['phase']} · "
+                f"{entry['created_at']}"
+            )
+            item = QListWidgetItem(label)
+            item.setData(Qt.ItemDataRole.UserRole, entry["import_id"])
+            self.records.addItem(item)
+            if entry["import_id"] == selected_id:
+                selected_row = index
+        if selected_row >= 0:
+            self.records.setCurrentRow(selected_row)
+        elif self.entries:
+            self.records.setCurrentRow(0)
+        else:
+            self.details.clear()
+            self.status.setText(
+                "No incomplete imports need attention. Completed and failed imports are "
+                "kept in the journal but are not listed here."
+            )
+        self.reconcile_button.setEnabled(bool(self.entries))
+        self.show_selected(self.records.currentRow())
+
+    def show_selected(self, row: int) -> None:
+        if row < 0 or row >= len(self.entries):
+            self.details.clear()
+            return
+        entry = self.entries[row]
+        destination = entry.get("destination_path") or "(not recorded)"
+        error = entry.get("error") or "No error recorded."
+        self.details.setPlainText(
+            f"Import ID: {entry['import_id']}\n"
+            f"Project ID: {entry['project_id']}\n"
+            f"Status: {entry['status']}\n"
+            f"Phase: {entry['phase']}\n"
+            f"Package manifest SHA-256: {entry['package_manifest_sha256']}\n"
+            f"Destination: {destination}\n"
+            f"Created: {entry['created_at']}\n"
+            f"Last updated: {entry['updated_at']}\n\n"
+            f"Recorded error: {error}\n\n"
+            f"Recommended action: {self._recommendation(entry)}"
+        )
+        self.status.setText(
+            "Reconciliation ignores entries updated in the previous five minutes to avoid "
+            "racing an active import."
+        )
+
+    def reconcile(self) -> None:
+        answer = QMessageBox.question(
+            self,
+            "Reconcile interrupted imports",
+            "Inspect stale journal entries and update their recovery status? "
+            "This does not delete files, remove projects, overwrite data or retry imports. "
+            "Entries updated in the previous five minutes are skipped.",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if answer != QMessageBox.StandardButton.Yes:
+            return
+        try:
+            results = reconcile_workspace_imports(
+                self.workspace, stale_after_seconds=self.STALE_AFTER_SECONDS
+            )
+        except (OSError, RuntimeError, ValueError) as exc:
+            QMessageBox.warning(self, "Recovery inspection failed", str(exc))
+            return
+        self.refresh()
+        if not results:
+            QMessageBox.information(
+                self,
+                "No stale imports reconciled",
+                "No eligible stale imports were found. Recent imports are protected by "
+                "the five-minute safety window.",
+            )
+            return
+        counts: dict[str, int] = {}
+        for result in results:
+            counts[result["status"]] = counts.get(result["status"], 0) + 1
+        summary = "\n".join(
+            f"{status}: {count}" for status, count in sorted(counts.items())
+        )
+        QMessageBox.information(
+            self,
+            "Import journal reconciled",
+            f"Updated {len(results)} stale import record(s):\n{summary}\n\n"
+            "No files or project records were deleted. Review recovery-required entries manually.",
+        )
+
 
 class ArchivedProjectsDialog(QDialog):
     """Inspect archived projects and restore them to the active workspace."""

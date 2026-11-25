@@ -1,6 +1,6 @@
 # Implementation Status
 
-**Release:** 0.6.4.dev0  
+**Release:** 0.6.7.dev0  
 **Status:** pre-alpha; not production-ready
 
 ## Implemented
@@ -43,6 +43,7 @@
 - [x] Recipient-side workspace import with new local IDs, full context revision history restoration, current records, task dependency remapping and marked source activity-history replay.
 - [x] Atomic SQLite restoration transaction; failed database restoration removes newly extracted files.
 - [x] Desktop package preview can import a handover into the current workspace.
+- [x] Desktop handover import recovery dialog lists incomplete journal entries, presents recovery guidance and explicitly reconciles stale states without deleting files or project records.
 - [x] CLI `preview` and `import` commands for verified packages.
 - [x] CLI `project export` and `project import` for workspace-aware handover round trips.
 - [x] Package tests for successful extraction, tamper rejection, existing destinations and unsafe paths.
@@ -55,6 +56,7 @@
 - [ ] Complete desktop accessibility and keyboard interaction audit, including screen-reader testing, focus visibility, contrast and platform-specific assistive technology.
 - [ ] Configurable activity page size, background loading and streaming exports; current UI loads fixed pages of 100 and exports the currently loaded, filtered subset.
 - [ ] Import conflict resolution and merge/replace workflows; current inspection is advisory and import always creates a new project.
+- [ ] Manual recovery procedure for `recovery_required` states; the UI intentionally does not delete, overwrite or retry mismatched imports.
 - [ ] Broader secret coverage, configurable exclusions, and independent validation of secret-scan false positives/negatives.
 - [ ] Encryption, signatures and key management.
 - [ ] Local/cloud AI adapters and consent UI.
@@ -62,4 +64,4 @@
 - [ ] Independent security review and interactive release qualification.
 
 ## Verification
-Core tests pass on Python 3.11, 3.12 and 3.13. Offscreen desktop smoke tests and PyInstaller bundle builds passed on Windows, macOS and Linux in run 45603548295. Wheel and source distributions also build and pass Twine metadata checks. The latest import-inspection comparison and dialog syntax repair are undergoing full cross-platform CI verification. Automated CI does not replace interactive manual QA, accessibility validation, signing/notarization or release qualification.
+The 0.6.6.dev0 import-journal change has passed the Python 3.11, 3.12 and 3.13 test jobs, Linux/macOS/Windows platform smoke tests, and Linux/Windows desktop bundle jobs in workflow run 45624824674; the macOS desktop bundle job was queued at the last inspection. The 0.6.7.dev0 recovery UI changes require a fresh CI run. Automated CI does not replace interactive manual QA, accessibility validation, signing/notarization or release qualification.

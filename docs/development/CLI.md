@@ -181,6 +181,12 @@ The current desktop foundation includes project selection and creation, six stru
 
 The UI remains pre-alpha. Project metadata editing and archive controls are available; archiving retains project data and removes the project from the active list. Task prerequisites can be added and removed from the Tasks tab; the service layer rejects self-links, cross-project links and cycles. Activity supports text search, event-type filtering, inclusive date-range filtering and export of the visible event set to JSON or Markdown. Deleted records can be reviewed and restored from each intelligence tab; edits to a deleted record are blocked until it is restored. The desktop shell can preview verified packages, save a Markdown handover report, extract files to a new folder, or import a package as a new project into the current workspace. The report includes project context, decisions, tasks, milestones, references, dependency details, a deterministic completeness indicator, file inventory and a recipient checklist. The indicator is not a guarantee of correctness or safety, and the report does not prove publisher identity. The Tasks tab includes a read-only layered dependency map. Keyboard/accessibility validation and installer validation are not complete.
 
+### Handover import recovery
+
+The desktop sidebar includes **Handover import recovery**. It lists non-terminal import journal entries and shows their IDs, status, phase, package manifest hash, destination, timestamps and recorded error. Select an entry to read its recovery recommendation.
+
+Choose **Reconcile stale imports** only after reviewing the warning. The operation skips entries updated in the previous five minutes. It may mark an import completed, failed or recovery-required based on the presence of its project record and extracted-files directory. It never deletes files, removes projects, overwrites data or retries an import. A `recovery_required` result must be investigated manually. The CLI equivalent remains `thread import-recovery --database ./workspace.sqlite3`.
+
 ## Notes
 
 - The database path is selected by the user; no hidden default workspace is created.

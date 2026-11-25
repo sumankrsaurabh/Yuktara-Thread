@@ -18,7 +18,7 @@ from yuktara_thread.application.workspace import WorkspaceService
 from yuktara_thread.infrastructure.package import PackageError, preview_package
 from yuktara_thread.ui.context import ContextEditor, ContextHistoryDialog
 from yuktara_thread.ui.dialogs import (
-    ArchivedProjectsDialog, PackagePreviewDialog, SearchDialog,
+    ArchivedProjectsDialog, ImportRecoveryDialog, PackagePreviewDialog, SearchDialog,
 )
 from yuktara_thread.ui.pages import ProjectPage
 from yuktara_thread.ui.panels import (
@@ -80,6 +80,9 @@ class MainWindow(QMainWindow):
         package_preview = QPushButton("Preview .thread package")
         package_preview.setAccessibleName("Preview Thread package")
         side_layout.addWidget(package_preview)
+        import_recovery = QPushButton("Handover import recovery…")
+        import_recovery.setAccessibleName("Handover import recovery")
+        side_layout.addWidget(import_recovery)
         side_layout.addWidget(QLabel(f"Database: {database_path.name}"))
 
         self.pages = QStackedWidget()
@@ -125,6 +128,7 @@ class MainWindow(QMainWindow):
         QWidget.setTabOrder(create_handover, backup_button)
         QWidget.setTabOrder(backup_button, restore_button)
         QWidget.setTabOrder(restore_button, package_preview)
+        QWidget.setTabOrder(package_preview, import_recovery)
 
         create.clicked.connect(self.create_project)
         archived_button.clicked.connect(self.open_archived_projects)
@@ -133,6 +137,7 @@ class MainWindow(QMainWindow):
         backup_button.clicked.connect(self.backup_current_workspace)
         restore_button.clicked.connect(self.restore_workspace_backup)
         package_preview.clicked.connect(self.open_package_preview)
+        import_recovery.clicked.connect(self.open_import_recovery)
         self.projects.currentItemChanged.connect(self.select_project)
         self.refresh_projects()
 
@@ -276,6 +281,10 @@ class MainWindow(QMainWindow):
             dialog.exec()
         except (PackageError, OSError, ValueError) as exc:
             QMessageBox.warning(self, "Invalid package", str(exc))
+
+    def open_import_recovery(self) -> None:
+        dialog = ImportRecoveryDialog(self.workspace, parent=self)
+        dialog.exec()
 
     def create_project(self) -> None:
         name, accepted = QInputDialog.getText(self, "New project", "Project name")
