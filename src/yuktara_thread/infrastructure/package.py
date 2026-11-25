@@ -63,6 +63,8 @@ def create_package(input_dir: Path, output_file: Path, project: dict[str, Any]) 
     if not source.is_dir():
         raise PackageError("Input path must be a directory")
     output = output_file.resolve()
+    if output == source or source in output.parents:
+        raise PackageError("Package output must be outside the selected files directory")
     output.parent.mkdir(parents=True, exist_ok=True)
 
     entries: list[tuple[Path, str]] = []
@@ -91,16 +93,28 @@ def create_package(input_dir: Path, output_file: Path, project: dict[str, Any]) 
             for path, name in entries
         ],
     }
-    manifest_bytes = json.dumps(manifest, ensure_ascii=False, indent=2).encode("utf-8")
+    if not isinstance(project, dict):
+        raise PackageError("Project metadata must be a JSON object")
+    try:
+        manifest_bytes = json.dumps(
+            manifest, ensure_ascii=False, indent=2, allow_nan=False
+        ).encode("utf-8")
+    except (TypeError, ValueError) as exc:
+        raise PackageError(f"Project metadata is not valid JSON: {exc}") from exc
     if len(manifest_bytes) > MAX_MANIFEST_BYTES:
         raise PackageError("Manifest exceeds size limit")
 
-    temporary = output.with_name(output.name + ".tmp")
+    temporary_fd, temporary_name = tempfile.mkstemp(
+        prefix=f".{output.name}.", suffix=".tmp", dir=output.parent
+    )
+    os.close(temporary_fd)
+    temporary = Path(temporary_name)
     try:
         with zipfile.ZipFile(temporary, "w", compression=zipfile.ZIP_DEFLATED) as archive:
             archive.writestr("manifest.json", manifest_bytes)
             for path, name in entries:
                 archive.write(path, name)
+        verify_package(temporary)
         os.replace(temporary, output)
     finally:
         if temporary.exists():
