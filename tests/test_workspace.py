@@ -93,6 +93,7 @@ def test_workspace_export_preserves_context_intelligence_and_dependencies(tmp_pa
     assert payload["handover_readiness"]["score"] < 100
     assert len(payload["context_sections"]) == 6
     assert next(s for s in payload["context_sections"] if s["section_key"] == "goals")["content"] == "Ship the first release"
+    assert [item["revision"] for item in payload["context_history"]["goals"]] == [2, 1]
     assert len(payload["decisions"]) == 1
     assert len(payload["tasks"]) == 2
     assert len(payload["milestones"]) == 1
@@ -167,6 +168,14 @@ def test_workspace_import_restores_context_records_dependencies_and_files(tmp_pa
     assert (extracted / "files" / "README.md").read_text(encoding="utf-8") == "Portable instructions"
     context = {section.section_key: section.content for section in receiving_workspace.get_context(imported.project_id)}
     assert context["goals"] == "Preserve the reasoning"
+    restored_goals = next(
+        section for section in receiving_workspace.get_context(imported.project_id)
+        if section.section_key == "goals"
+    )
+    assert restored_goals.revision == 2
+    restored_history = receiving_workspace.context.history(imported.project_id, "goals")
+    assert [item["revision"] for item in restored_history] == [2, 1]
+    assert restored_history[1]["content"] == ""
     decisions = receiving_workspace.intelligence.list_records(imported.project_id, "decision")
     assert decisions[0]["alternatives"] == ["JSON", "SQLite"]
     tasks = receiving_workspace.intelligence.list_records(imported.project_id, "task")
