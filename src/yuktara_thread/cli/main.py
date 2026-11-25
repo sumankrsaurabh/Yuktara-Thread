@@ -67,6 +67,9 @@ def build_parser() -> argparse.ArgumentParser:
     project_archive = project_actions.add_parser("archive", help="Archive a project")
     project_archive.add_argument("--database", required=True, type=Path)
     project_archive.add_argument("--project-id", required=True)
+    project_restore = project_actions.add_parser("restore", help="Restore an archived project")
+    project_restore.add_argument("--database", required=True, type=Path)
+    project_restore.add_argument("--project-id", required=True)
     project_export = project_actions.add_parser("export", help="Compile a workspace project into a .thread package")
     project_export.add_argument("--database", required=True, type=Path)
     project_export.add_argument("--project-id", required=True)
@@ -155,6 +158,11 @@ def main(argv: list[str] | None = None) -> int:
                 return 0
             if args.project_action == "archive":
                 project = workspace.archive_project(args.project_id)
+                print(json.dumps({"project_id": project.project_id, "status": project.status},
+                                 indent=2))
+                return 0
+            if args.project_action == "restore":
+                project = workspace.restore_project(args.project_id)
                 print(json.dumps({"project_id": project.project_id, "status": project.status},
                                  indent=2))
                 return 0
