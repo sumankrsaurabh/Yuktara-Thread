@@ -40,4 +40,6 @@
 
 ## Residual risk
 
+Workspace backups are not encrypted and can contain all local project data; they must be stored and transferred with the same care as the original workspace. Restore accepts only a validated workspace database and publishes to a new path.
+
 The secret scan is heuristic, bounded and best-effort: it can miss secrets in unsupported encodings, binary files, oversized files or unrecognized formats, and it can flag harmless text. It is not a DLP system. The current foundation is not audited. It does not encrypt packages, authenticate publishers, detect malware or guarantee safety of files after a user opens them. Use only non-sensitive test data during early development.
