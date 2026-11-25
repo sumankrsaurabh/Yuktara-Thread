@@ -4,6 +4,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QAction, QKeySequence
 from PySide6.QtWidgets import (
     QDialog, QFormLayout, QFrame, QHBoxLayout, QInputDialog, QFileDialog,
     QLabel, QLineEdit, QListWidget, QListWidgetItem, QMainWindow, QMessageBox,
@@ -31,6 +32,8 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.workspace = WorkspaceService(database_path)
         self.setWindowTitle("Yuktara Thread")
+        self.setAccessibleName("Yuktara Thread project workspace")
+        self.setAccessibleDescription("Local-first project continuity and handover workspace.")
         self.setMinimumSize(980, 680)
         self.resize(1240, 820)
 
@@ -49,22 +52,33 @@ class MainWindow(QMainWindow):
         brand.setObjectName("brand")
         side_layout.addWidget(brand)
         search_button = QPushButton("Search workspace…")
+        search_button.setAccessibleName("Search workspace")
+        search_button.setAccessibleDescription("Search project names, context, decisions, tasks and references.")
         side_layout.addWidget(search_button)
         side_layout.addWidget(QLabel("WORKSPACE"))
         archived_button = QPushButton("Archived projects…")
+        archived_button.setAccessibleName("Archived projects")
         side_layout.addWidget(archived_button)
         self.projects = QListWidget()
+        self.projects.setObjectName("projectList")
+        self.projects.setAccessibleName("Active workspace projects")
+        self.projects.setAccessibleDescription("Select a project to open its workspace.")
         side_layout.addWidget(self.projects, 1)
         create = QPushButton("＋  New project")
+        create.setAccessibleName("Create new project")
         create.setObjectName("primary")
         side_layout.addWidget(create)
         create_handover = QPushButton("Create handover package")
+        create_handover.setAccessibleName("Create handover package")
         side_layout.addWidget(create_handover)
         backup_button = QPushButton("Back up workspace…")
+        backup_button.setAccessibleName("Back up workspace")
         restore_button = QPushButton("Restore backup as new workspace…")
+        restore_button.setAccessibleName("Restore backup as a new workspace")
         side_layout.addWidget(backup_button)
         side_layout.addWidget(restore_button)
         package_preview = QPushButton("Preview .thread package")
+        package_preview.setAccessibleName("Preview Thread package")
         side_layout.addWidget(package_preview)
         side_layout.addWidget(QLabel(f"Database: {database_path.name}"))
 
@@ -87,6 +101,30 @@ class MainWindow(QMainWindow):
         root_layout.addWidget(sidebar)
         root_layout.addWidget(self.pages, 1)
         self.setCentralWidget(root)
+        self.statusBar().showMessage("Local workspace · no automatic network transfer")
+
+        # Keyboard shortcuts are attached to the main window and work across project tabs.
+        self._shortcuts = []
+        for label, shortcut, callback in (
+            ("New project", QKeySequence.StandardKey.New, self.create_project),
+            ("Search workspace", QKeySequence("Ctrl+K"), self.open_search_dialog),
+            ("Preview Thread package", QKeySequence.StandardKey.Open, self.open_package_preview),
+        ):
+            action = QAction(label, self)
+            action.setShortcut(shortcut)
+            action.setShortcutContext(Qt.ShortcutContext.WindowShortcut)
+            action.triggered.connect(callback)
+            self.addAction(action)
+            self._shortcuts.append(action)
+
+        # Keep sidebar controls in a predictable keyboard traversal order.
+        QWidget.setTabOrder(search_button, archived_button)
+        QWidget.setTabOrder(archived_button, self.projects)
+        QWidget.setTabOrder(self.projects, create)
+        QWidget.setTabOrder(create, create_handover)
+        QWidget.setTabOrder(create_handover, backup_button)
+        QWidget.setTabOrder(backup_button, restore_button)
+        QWidget.setTabOrder(restore_button, package_preview)
 
         create.clicked.connect(self.create_project)
         archived_button.clicked.connect(self.open_archived_projects)
