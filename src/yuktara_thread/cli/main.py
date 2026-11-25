@@ -5,6 +5,7 @@ import json
 import sys
 from pathlib import Path
 
+from yuktara_thread.application.handover import export_workspace_project
 from yuktara_thread.application.workspace import WorkspaceService
 from yuktara_thread.domain.models import ProjectContext
 from yuktara_thread.infrastructure.package import (
@@ -52,6 +53,12 @@ def build_parser() -> argparse.ArgumentParser:
     project_archive = project_actions.add_parser("archive", help="Archive a project")
     project_archive.add_argument("--database", required=True, type=Path)
     project_archive.add_argument("--project-id", required=True)
+    project_export = project_actions.add_parser("export", help="Compile a workspace project into a .thread package")
+    project_export.add_argument("--database", required=True, type=Path)
+    project_export.add_argument("--project-id", required=True)
+    project_export.add_argument("--files", required=True, type=Path,
+                                help="Directory containing explicitly selected handover files")
+    project_export.add_argument("--output", required=True, type=Path)
     return parser
 
 
@@ -104,6 +111,15 @@ def main(argv: list[str] | None = None) -> int:
                 project = workspace.archive_project(args.project_id)
                 print(json.dumps({"project_id": project.project_id, "status": project.status},
                                  indent=2))
+                return 0
+            if args.project_action == "export":
+                package_path = export_workspace_project(
+                    workspace, args.project_id, args.files, args.output
+                )
+                print(json.dumps({
+                    "exported": True, "project_id": args.project_id,
+                    "package": str(package_path),
+                }, indent=2, ensure_ascii=False))
                 return 0
     except (PackageError, ValueError, OSError, LookupError, RuntimeError) as exc:
         print(f"Error: {exc}", file=sys.stderr)
