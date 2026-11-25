@@ -42,6 +42,7 @@ Workspace-aware export stores these fields inside `project`:
 - `decisions`, `tasks`, `milestones`, `references`.
 - `task_dependencies`: source task ID and prerequisite task ID pairs.
 - `activity_events`: up to 1,000 recent event records.
+- `handover_readiness`: deterministic completeness assessment calculated at export time. It is informational and does not certify correctness or safety.
 - `handover_schema_version`: 1.
 
 The SQLite database itself is never packaged. Context revision bodies are not currently exported. Activity events are included in the package and report; workspace import records their source count in the import event rather than replaying the source audit history.
