@@ -161,3 +161,22 @@ def test_deleted_entities_cannot_be_restored_twice(workspace):
     service.restore_record(project.project_id, "reference", record["reference_id"])
     with pytest.raises(LookupError, match="Deleted reference not found"):
         service.restore_record(project.project_id, "reference", record["reference_id"])
+
+
+
+def test_soft_deleted_record_cannot_be_edited_until_restored(tmp_path):
+    from yuktara_thread.application.workspace import WorkspaceService
+    import pytest
+
+    workspace = WorkspaceService(tmp_path / "deleted-edit.sqlite3")
+    project = workspace.create_project("Deleted edit guard")
+    task = workspace.intelligence.create_task(project.project_id, title="Do not edit")
+    workspace.intelligence.delete_record(project.project_id, "task", task["task_id"])
+
+    with pytest.raises(LookupError, match="not found in active project"):
+        workspace.intelligence.update_record(
+            project.project_id, "task", task["task_id"], title="Hidden edit"
+        )
+
+    restored = workspace.restore_record(project.project_id, "task", task["task_id"])
+    assert restored["title"] == "Do not edit"
