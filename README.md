@@ -30,7 +30,7 @@ Yuktara Thread is a local-first project continuity and handover platform. It pre
 - Local heuristic secret scan before handover export; flagged exports require explicit user acknowledgement, and matched values are never displayed.
 - Safe extraction rejects existing destinations, validates manifest metadata and file hashes, and removes staging data on failure.
 - CLI commands for package creation/verification and local workspace/project management.
-- Optional PySide6 desktop application (`.[desktop]`) with project editing/archive, context editing and revision history, structured intelligence forms, task prerequisites and dependency map, deleted-record recovery, searchable/filterable/exportable activity, verified package preview, workspace import, file extraction and Markdown handover report export.
+- Optional PySide6 desktop application (`.[desktop]`) with first-run workspace selection, project editing/archive, context editing and revision history, structured intelligence forms, task prerequisites and dependency map, deleted-record recovery, searchable/filterable/exportable activity, verified package preview, workspace import, file extraction and Markdown handover report export.
 - Automated tests and GitHub Actions CI for Python 3.11–3.13, with Windows/macOS/Linux platform smoke coverage being added.
 
 ## Quick start
