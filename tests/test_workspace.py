@@ -212,7 +212,6 @@ def test_workspace_import_rejects_dependency_cycle_before_extracting(tmp_path: P
 
 
 def test_workspace_import_removes_extracted_files_when_database_transaction_fails(tmp_path: Path) -> None:
-    import sqlite3
     from yuktara_thread.application.handover import import_workspace_project
     from yuktara_thread.domain.models import ProjectContext
     from yuktara_thread.infrastructure.package import create_package
@@ -231,7 +230,7 @@ def test_workspace_import_removes_extracted_files_when_database_transaction_fail
         )
     destination = tmp_path / "extracted"
 
-    with pytest.raises(sqlite3.IntegrityError, match="simulated database failure"):
+    with pytest.raises(RuntimeError, match="simulated database failure"):
         import_workspace_project(workspace, package, destination)
 
     assert workspace.list_projects() == []
