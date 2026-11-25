@@ -251,3 +251,15 @@ def test_record_purge_cli_requires_explicit_confirmation(tmp_path: Path, capsys)
     result = json.loads(capsys.readouterr().out)
     assert result["purged"] is True
     assert result["purged_count"] == 1
+
+
+
+def test_import_recovery_cli_is_non_destructive(tmp_path: Path, capsys) -> None:
+    database = tmp_path / "recovery-cli.sqlite3"
+    assert main(["workspace", "init", "--database", str(database)]) == 0
+    capsys.readouterr()
+
+    assert main(["import-recovery", "--database", str(database)]) == 0
+    result = json.loads(capsys.readouterr().out)
+    assert result["reconciled_count"] == 0
+    assert "No files or project records were deleted" in result["note"]
