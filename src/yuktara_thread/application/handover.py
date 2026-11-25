@@ -12,7 +12,7 @@ from yuktara_thread.application.workspace import WorkspaceService
 from yuktara_thread.domain.context.models import CONTEXT_TITLES
 from yuktara_thread.domain.projects.models import Project, validate_project_name
 from yuktara_thread.infrastructure.database.repositories.events import append_project_event
-from yuktara_thread.infrastructure.package import create_package, import_package, preview_package
+from yuktara_thread.infrastructure.package import PackageError, create_package, import_package, preview_package
 
 
 def export_workspace_project(
@@ -177,6 +177,10 @@ def import_workspace_project(
         raise ValueError("Activity history must contain at most 1,000 events")
 
     extracted = import_package(package_file, files_destination)
+    confirmed_preview = preview_package(package_file)
+    if confirmed_preview["manifest_sha256"] != preview["manifest_sha256"]:
+        shutil.rmtree(extracted, ignore_errors=True)
+        raise PackageError("Package changed during workspace import")
     project_id = str(uuid4())
     now = datetime.now(timezone.utc).isoformat()
     try:
