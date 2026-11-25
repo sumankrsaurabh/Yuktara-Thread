@@ -9,9 +9,14 @@ def _text(value: Any) -> str:
     return str(value).replace("\r\n", "\n").replace("\r", "\n").strip()
 
 
-def _list(value: Any) -> list:
-    """Treat malformed optional collections as absent in a preview report."""
-    return value if isinstance(value, list) else []
+def _records(value: Any) -> list[dict[str, Any]]:
+    """Keep only object records from untrusted optional metadata collections."""
+    return [item for item in value if isinstance(item, dict)] if isinstance(value, list) else []
+
+
+def _strings(value: Any) -> list[str]:
+    """Keep only text values in optional string collections."""
+    return [item for item in value if isinstance(item, str)] if isinstance(value, list) else []
 
 
 def render_handover_report(preview: dict[str, Any]) -> str:
@@ -22,13 +27,13 @@ def render_handover_report(preview: dict[str, Any]) -> str:
     files = sorted(preview.get("files", []), key=lambda item: item["path"].casefold())
     total_bytes = sum(int(item["size"]) for item in files)
 
-    context_sections = _list(project.get("context_sections", []))
-    decisions = _list(project.get("decisions", []))
-    tasks = _list(project.get("tasks", []))
-    milestones = _list(project.get("milestones", []))
-    references = _list(project.get("references", []))
-    dependencies = _list(project.get("task_dependencies", []))
-    events = _list(project.get("activity_events", []))
+    context_sections = _records(project.get("context_sections", []))
+    decisions = _records(project.get("decisions", []))
+    tasks = _records(project.get("tasks", []))
+    milestones = _records(project.get("milestones", []))
+    references = _records(project.get("references", []))
+    dependencies = _records(project.get("task_dependencies", []))
+    events = _records(project.get("activity_events", []))
     lines = [
         f"# Handover: {name}",
         "",
@@ -123,12 +128,18 @@ def render_handover_report(preview: dict[str, Any]) -> str:
     else:
         lines.append("No references included.")
     lines.extend(["", "## Task prerequisites", ""])
-    task_titles = {item.get("task_id"): _text(item.get("title") or "Untitled task") for item in tasks}
+    task_titles = {
+        item["task_id"]: _text(item.get("title") or "Untitled task")
+        for item in tasks if isinstance(item.get("task_id"), str)
+    }
     if dependencies:
         for dependency in dependencies:
-            task_title = task_titles.get(dependency.get("task_id"), "Unknown task")
-            prerequisite_title = task_titles.get(
-                dependency.get("depends_on_task_id"), "Unknown prerequisite"
+            task_id = dependency.get("task_id")
+            prerequisite_id = dependency.get("depends_on_task_id")
+            task_title = task_titles.get(task_id, "Unknown task") if isinstance(task_id, str) else "Unknown task"
+            prerequisite_title = (
+                task_titles.get(prerequisite_id, "Unknown prerequisite")
+                if isinstance(prerequisite_id, str) else "Unknown prerequisite"
             )
             lines.append(f"- {task_title} depends on {prerequisite_title}")
     else:
