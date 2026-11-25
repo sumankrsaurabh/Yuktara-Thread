@@ -325,6 +325,9 @@ def test_workspace_import_removes_extracted_files_when_database_transaction_fail
 
     assert workspace.list_projects() == []
     assert not destination.exists()
+    with workspace.database.read() as connection:
+        journal = connection.execute("SELECT status FROM handover_imports").fetchone()
+    assert journal["status"] == "failed"
 
 
 def test_workspace_import_reports_manual_recovery_when_file_cleanup_fails(
@@ -365,6 +368,9 @@ def test_workspace_import_reports_manual_recovery_when_file_cleanup_fails(
     assert destination.exists()
     assert "After confirming no project was created" in str(error.value)
     assert workspace.list_projects() == []
+    with workspace.database.read() as connection:
+        journal = connection.execute("SELECT status FROM handover_imports").fetchone()
+    assert journal["status"] == "recovery_required"
 
 
 def test_archived_project_can_be_restored_without_losing_data_or_history(tmp_path: Path) -> None:
