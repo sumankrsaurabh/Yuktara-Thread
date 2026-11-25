@@ -44,7 +44,8 @@
 - [x] Human-readable handover report with decisions, tasks, milestones, references and context.
 - [x] Deterministic handover readiness checks and report indicator.
 - [x] Secret inclusion warnings and inclusion review.
-- [x] Portable PyInstaller bundles built on Windows/macOS/Linux (unsigned).\n- [ ] Signed installers and interactive platform QA.
+- [x] Portable PyInstaller bundles built on Windows/macOS/Linux (unsigned).
+- [ ] Signed installers and interactive platform QA.
 - [x] Cross-platform CI smoke-test matrix, PyInstaller bundle builds and Python wheel/sdist validation.
 
 ## P4 — Optional intelligence and collaboration
