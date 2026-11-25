@@ -242,10 +242,10 @@ class ProjectIntelligenceRepository:
                     "purged": False, "eligible_count": len(entity_ids),
                     "cutoff": cutoff, "older_than_days": older_than_days,
                 }
-            placeholders = ", ".join("?" for _ in entity_ids)
             connection.execute(
-                f"DELETE FROM {table} WHERE project_id = ? AND {id_column} IN ({placeholders})",
-                [project_id, *entity_ids],
+                f"DELETE FROM {table} "
+                "WHERE project_id = ? AND deleted_at IS NOT NULL AND deleted_at < ?",
+                (project_id, cutoff),
             )
             append_project_event(
                 connection, project_id=project_id,
