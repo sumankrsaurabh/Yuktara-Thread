@@ -82,6 +82,18 @@ def build_parser() -> argparse.ArgumentParser:
     project_import.add_argument("--database", required=True, type=Path)
     project_import.add_argument("--package", required=True, type=Path)
     project_import.add_argument("--files-destination", required=True, type=Path)
+    record = commands.add_parser("record", help="Recover soft-deleted project records")
+    record_actions = record.add_subparsers(dest="record_action", required=True)
+    deleted_records = record_actions.add_parser("list-deleted", help="List deleted records in a project")
+    deleted_records.add_argument("--database", required=True, type=Path)
+    deleted_records.add_argument("--project-id", required=True)
+    deleted_records.add_argument("--entity-type", required=True, choices=["decision", "task", "milestone", "reference"])
+    record_restore = record_actions.add_parser("restore", help="Restore a deleted project record")
+    record_restore.add_argument("--database", required=True, type=Path)
+    record_restore.add_argument("--project-id", required=True)
+    record_restore.add_argument("--entity-type", required=True, choices=["decision", "task", "milestone", "reference"])
+    record_restore.add_argument("--entity-id", required=True)
+
     return parser
 
 
@@ -139,6 +151,21 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "desktop":
             from yuktara_thread.ui.app import run as run_desktop
             return run_desktop(args.database)
+        if args.command == "record":
+            workspace = WorkspaceService(args.database)
+            if args.record_action == "list-deleted":
+                records = workspace.intelligence.list_records(
+                    args.project_id, args.entity_type, include_deleted=True
+                )
+                deleted = [item for item in records if item.get("deleted_at") is not None]
+                print(json.dumps(deleted, indent=2, ensure_ascii=False))
+                return 0
+            if args.record_action == "restore":
+                restored = workspace.restore_record(
+                    args.project_id, args.entity_type, args.entity_id
+                )
+                print(json.dumps({"restored": True, "record": restored}, indent=2, ensure_ascii=False))
+                return 0
         if args.command == "project":
             workspace = WorkspaceService(args.database)
             if args.project_action == "create":
