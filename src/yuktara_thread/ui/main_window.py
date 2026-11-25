@@ -45,8 +45,95 @@ class ContextEditor(QWidget):
             QMessageBox.warning(self, "Could not save", str(exc))
 
 
+class EntityEditorDialog(QDialog):
+    """Typed editor for the structured fields of a project intelligence record."""
+
+    FIELD_SPECS = {
+        "decision": [
+            ("title", "Title", "line", []),
+            ("problem", "Problem", "area", []),
+            ("selected_option", "Selected option", "line", []),
+            ("alternatives", "Alternatives (one per line)", "area", []),
+            ("rationale", "Rationale", "area", []),
+            ("consequences", "Consequences", "area", []),
+            ("status", "Status", "choice", ["proposed", "accepted", "rejected", "superseded"]),
+        ],
+        "task": [
+            ("title", "Title", "line", []),
+            ("description", "Description", "area", []),
+            ("status", "Status", "choice", ["open", "in_progress", "blocked", "completed", "cancelled"]),
+            ("priority", "Priority", "choice", ["low", "normal", "high", "critical"]),
+            ("owner", "Owner", "line", []),
+            ("due_at", "Due date (ISO 8601)", "line", []),
+        ],
+        "milestone": [
+            ("title", "Title", "line", []),
+            ("description", "Description", "area", []),
+            ("due_at", "Due date (ISO 8601)", "line", []),
+            ("status", "Status", "choice", ["planned", "in_progress", "completed", "cancelled"]),
+        ],
+        "reference": [
+            ("title", "Title", "line", []),
+            ("reference_type", "Type", "choice", ["document", "repository", "website", "issue", "person", "other"]),
+            ("uri", "URI or location", "line", []),
+            ("notes", "Notes", "area", []),
+        ],
+    }
+
+    def __init__(self, kind: str, values: dict | None = None, parent=None) -> None:
+        super().__init__(parent)
+        self.kind = kind
+        self.fields = {}
+        self.setWindowTitle(f"{'Edit' if values else 'New'} {kind}")
+        self.setMinimumWidth(460)
+        form = QFormLayout(self)
+        initial = values or {}
+        for key, label, widget_type, choices in self.FIELD_SPECS[kind]:
+            if widget_type == "area":
+                widget = QPlainTextEdit()
+                widget.setPlainText(
+                    "\\n".join(initial.get(key, [])) if key == "alternatives"
+                    else str(initial.get(key) or "")
+                )
+                widget.setMinimumHeight(72)
+            elif widget_type == "choice":
+                widget = QComboBox()
+                widget.addItems(choices)
+                widget.setCurrentText(str(initial.get(key) or choices[0]))
+            else:
+                widget = QLineEdit(str(initial.get(key) or ""))
+            self.fields[key] = widget
+            form.addRow(label, widget)
+
+        buttons = QHBoxLayout()
+        buttons.addStretch(1)
+        cancel = QPushButton("Cancel")
+        save = QPushButton("Save")
+        save.setObjectName("primary")
+        cancel.clicked.connect(self.reject)
+        save.clicked.connect(self.accept)
+        buttons.addWidget(cancel)
+        buttons.addWidget(save)
+        form.addRow(buttons)
+
+    def values(self) -> dict:
+        result = {}
+        for key, widget in self.fields.items():
+            if isinstance(widget, QPlainTextEdit):
+                value = widget.toPlainText().strip()
+                if key == "alternatives":
+                    result[key] = [line.strip() for line in value.splitlines() if line.strip()]
+                    continue
+            elif isinstance(widget, QComboBox):
+                value = widget.currentText()
+            else:
+                value = widget.text().strip()
+            result[key] = value or (None if key == "due_at" else "")
+        return result
+
+
 class EntityPanel(QWidget):
-    """Compact list/create/rename/delete screen for one intelligence entity type."""
+    """Full-field CRUD editor for decisions, tasks, milestones and references."""
 
     def __init__(self, workspace: WorkspaceService, project_id: str, kind: str) -> None:
         super().__init__()
@@ -56,23 +143,23 @@ class EntityPanel(QWidget):
         self.list = QListWidget()
         layout = QVBoxLayout(self)
         description = QLabel(
-            "Keep this information concise and useful to the next person continuing the project."
+            "Capture enough detail for another person to understand and continue this work."
         )
         description.setObjectName("muted")
         layout.addWidget(description)
         layout.addWidget(self.list, 1)
         actions = QHBoxLayout()
         add = QPushButton(f"Add {kind}")
-        rename = QPushButton("Rename")
+        edit = QPushButton("Edit details")
         delete = QPushButton("Delete")
         add.setObjectName("primary")
         actions.addWidget(add)
         actions.addStretch(1)
-        actions.addWidget(rename)
+        actions.addWidget(edit)
         actions.addWidget(delete)
         layout.addLayout(actions)
         add.clicked.connect(self.add_record)
-        rename.clicked.connect(self.rename_record)
+        edit.clicked.connect(self.edit_record)
         delete.clicked.connect(self.delete_record)
         self.refresh()
 
@@ -84,8 +171,8 @@ class EntityPanel(QWidget):
             self.list.addItem(item)
 
     def add_record(self) -> None:
-        title, accepted = QInputDialog.getText(self, f"New {self.kind}", "Title")
-        if not accepted:
+        dialog = EntityEditorDialog(self.kind, parent=self)
+        if dialog.exec() != QDialog.DialogCode.Accepted:
             return
         try:
             creators = {
@@ -94,29 +181,27 @@ class EntityPanel(QWidget):
                 "milestone": self.workspace.intelligence.create_milestone,
                 "reference": self.workspace.intelligence.create_reference,
             }
-            creators[self.kind](self.project_id, title=title)
+            creators[self.kind](self.project_id, **dialog.values())
             self.refresh()
         except (ValueError, LookupError, RuntimeError) as exc:
             QMessageBox.warning(self, "Could not add item", str(exc))
 
-    def rename_record(self) -> None:
+    def edit_record(self) -> None:
         item = self.list.currentItem()
         if item is None:
             return
         record = item.data(Qt.ItemDataRole.UserRole)
-        id_key = f"{self.kind}_id"
-        title, accepted = QInputDialog.getText(
-            self, f"Rename {self.kind}", "Title", text=str(record["title"])
-        )
-        if not accepted:
+        dialog = EntityEditorDialog(self.kind, record, self)
+        if dialog.exec() != QDialog.DialogCode.Accepted:
             return
         try:
             self.workspace.intelligence.update_record(
-                self.project_id, self.kind, str(record[id_key]), title=title
+                self.project_id, self.kind, str(record[f"{self.kind}_id"]),
+                **dialog.values(),
             )
             self.refresh()
         except (ValueError, LookupError, RuntimeError) as exc:
-            QMessageBox.warning(self, "Could not rename item", str(exc))
+            QMessageBox.warning(self, "Could not update item", str(exc))
 
     def delete_record(self) -> None:
         item = self.list.currentItem()
