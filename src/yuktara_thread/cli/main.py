@@ -93,6 +93,17 @@ def build_parser() -> argparse.ArgumentParser:
     record_restore.add_argument("--project-id", required=True)
     record_restore.add_argument("--entity-type", required=True, choices=["decision", "task", "milestone", "reference"])
     record_restore.add_argument("--entity-id", required=True)
+    purge_records = record_actions.add_parser(
+        "purge-deleted", help="Dry-run or permanently purge old soft-deleted records"
+    )
+    purge_records.add_argument("--database", required=True, type=Path)
+    purge_records.add_argument("--project-id", required=True)
+    purge_records.add_argument("--entity-type", required=True, choices=["decision", "task", "milestone", "reference"])
+    purge_records.add_argument("--older-than-days", required=True, type=int)
+    purge_records.add_argument(
+        "--confirm", action="store_true",
+        help="Permanently remove eligible records after reviewing the dry-run count",
+    )
 
     return parser
 
@@ -165,6 +176,14 @@ def main(argv: list[str] | None = None) -> int:
                     args.project_id, args.entity_type, args.entity_id
                 )
                 print(json.dumps({"restored": True, "record": restored}, indent=2, ensure_ascii=False))
+                return 0
+            if args.record_action == "purge-deleted":
+                result = workspace.purge_deleted_records(
+                    args.project_id, args.entity_type,
+                    older_than_days=args.older_than_days,
+                    confirm=args.confirm,
+                )
+                print(json.dumps(result, indent=2, ensure_ascii=False))
                 return 0
         if args.command == "project":
             workspace = WorkspaceService(args.database)
