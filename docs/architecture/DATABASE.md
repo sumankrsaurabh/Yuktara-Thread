@@ -27,7 +27,11 @@ The MVP uses one SQLite database per local workspace. The application layer owns
 - `milestones`: dated project checkpoints and status.
 - `project_references`: typed URI or local reference metadata.
 
-Event payloads must not contain secrets, credentials, or raw file contents. Current event coverage is limited to intelligence entity creation and task dependency changes; project and context changes are not yet included.
+## Event policy
+
+Events are inserted in the same database transaction as the operation they describe. Current coverage includes project create/update/archive, context saves, intelligence entity create/update/delete, and task dependency additions. Payloads are curated and must never contain credentials, secrets or raw file contents. Event rows are append-only at the repository layer; physical deletion of a project cascades its events, so project deletion is not exposed as a user operation.
+
+Entity deletion currently physically removes the entity row while preserving a minimal deletion event. A future retention/export policy and soft-delete/restore semantics remain open design work.
 
 ## Concurrency
 
