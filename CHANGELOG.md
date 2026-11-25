@@ -14,13 +14,12 @@ All notable changes to Yuktara Thread are documented here. Development versions 
 ### Limitations
 - Recovery reconciliation is explicit, not automatic at application startup. Ambiguous states are never deleted or overwritten.
 
+## 0.6.5.dev0 — 2026-11-25
+
 ### Added
-- Failed workspace imports now report the failing phase and verify whether extracted files were removed.
+- Failed workspace imports report the failing phase and verify whether extracted files were removed.
 - When automatic cleanup fails, the error identifies the retained directory and instructs the operator to confirm that no project was created before manual recovery.
 - Regression coverage for failed database imports whose extracted files cannot be cleaned up.
-
-### Limitations
-- Reconciliation is explicit through the CLI and never deletes files or project records. Ambiguous or inconsistent states require operator review.
 
 ## 0.6.4.dev0 — 2026-11-25
 
