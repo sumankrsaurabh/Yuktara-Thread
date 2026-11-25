@@ -12,6 +12,7 @@ from PySide6.QtWidgets import (
 
 from yuktara_thread.application.handover import import_workspace_project
 from yuktara_thread.application.handover_report import render_handover_report
+from yuktara_thread.application.readiness import assess_handover_readiness
 from yuktara_thread.application.workspace import WorkspaceService
 from yuktara_thread.infrastructure.package import PackageError, import_package, preview_package
 
@@ -379,6 +380,54 @@ class ActivityPanel(QWidget):
             self.list.addItem(item)
 
 
+class ReadinessPanel(QWidget):
+    """Live, deterministic handover completeness checks for a workspace project."""
+
+    def __init__(self, workspace: WorkspaceService, project) -> None:
+        super().__init__()
+        self.workspace = workspace
+        self.project = project
+        layout = QVBoxLayout(self)
+        heading = QLabel("Handover readiness")
+        heading.setStyleSheet("font-weight: 600;")
+        layout.addWidget(heading)
+        self.summary = QLabel()
+        self.summary.setWordWrap(True)
+        layout.addWidget(self.summary)
+        self.checks = QListWidget()
+        self.checks.setMaximumHeight(230)
+        layout.addWidget(self.checks)
+        refresh = QPushButton("Refresh readiness checks")
+        refresh.clicked.connect(self.refresh)
+        layout.addWidget(refresh, 0, Qt.AlignmentFlag.AlignLeft)
+        self.refresh()
+
+    def refresh(self) -> None:
+        context = self.workspace.get_context(self.project.project_id)
+        records = {
+            kind: self.workspace.intelligence.list_records(self.project.project_id, kind)
+            for kind in ("decision", "task", "milestone", "reference")
+        }
+        result = assess_handover_readiness(
+            self.project, context, records["decision"], records["task"],
+            records["milestone"], records["reference"],
+        )
+        status = result["status"].replace("_", " ").title()
+        self.summary.setText(
+            f"{result['score']}% completeness indicator · {status}\n"
+            "This checks documentation completeness, not correctness or safety."
+        )
+        self.checks.clear()
+        for check in result["checks"]:
+            symbol = "✓" if check["passed"] else "○"
+            priority = "Required" if check["required"] else "Recommended"
+            item = QListWidgetItem(
+                f"{symbol}  {check['label']} · {priority}"
+                + ("" if check["passed"] else f" — {check['detail']}")
+            )
+            self.checks.addItem(item)
+
+
 class ProjectPage(QWidget):
     def __init__(self, workspace: WorkspaceService, project, *,
                  on_edit=None, on_archive=None) -> None:
@@ -408,6 +457,7 @@ class ProjectPage(QWidget):
         overview_layout.addWidget(QLabel(
             "Use the tabs to preserve decisions, execution work, milestones, references and context."
         ))
+        overview_layout.addWidget(ReadinessPanel(workspace, project))
         overview_layout.addStretch(1)
         tabs.addTab(overview, "Overview")
 
