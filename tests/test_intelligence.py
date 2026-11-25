@@ -97,7 +97,7 @@ def test_update_rejects_invalid_fields_and_missing_entities(workspace):
         )
     with pytest.raises(ValueError, match="Unsupported"):
         service.intelligence.update_record(
-            project.project_id, "task", task["task_id"], project_id="other"
+            project.project_id, "task", task["task_id"], unexpected_field="other"
         )
     with pytest.raises(LookupError):
         service.intelligence.delete_record(project.project_id, "task", "missing")
