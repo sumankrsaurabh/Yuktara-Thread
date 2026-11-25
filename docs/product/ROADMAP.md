@@ -17,7 +17,8 @@
 - [x] Transactional activity events for project, context and intelligence mutations.
 - [x] Task dependency graph with cycle prevention.
 - [ ] Soft-delete/restore and event retention/export policy.
-- [ ] Search, backup and recovery.
+- [ ] Search and advanced recovery workflows.
+- [x] Consistent SQLite backup and integrity-checked restore into a new workspace database.
 
 ## P3 — Desktop MVP
 - [x] Initial PySide6 desktop shell and workspace navigation.
