@@ -115,7 +115,7 @@ def import_workspace_project(
             if not isinstance(record, dict):
                 raise ValueError(f"Invalid {kind} record")
             fields = workspace.intelligence.FIELDS[kind]
-            table, id_column = workspace.intelligence.TABLES[kind]
+            _, id_column = workspace.intelligence.TABLES[kind]
             allowed_record_keys = fields | {
                 id_column, "project_id", "created_at", "updated_at",
             }
