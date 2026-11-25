@@ -12,11 +12,12 @@
 - [x] Optimistic concurrency for context editing.
 
 ## P2 — Project Intelligence Core (0.3)
-- [x] Decisions, tasks, milestones and references (create/list foundation).
-- [x] Append-only events for intelligence entity creation and task dependency changes.
+- [x] Decisions, tasks, milestones and references.
+- [x] Create/list/update/delete lifecycle.
+- [x] Transactional activity events for project, context and intelligence mutations.
 - [x] Task dependency graph with cycle prevention.
-- [ ] Full entity update/delete lifecycle and comprehensive event coverage.
-- [ ] Project/context events, search, backup and recovery.
+- [ ] Soft-delete/restore and event retention/export policy.
+- [ ] Search, backup and recovery.
 
 ## P3 — Desktop MVP
 - [ ] PySide6 desktop shell and design system.
