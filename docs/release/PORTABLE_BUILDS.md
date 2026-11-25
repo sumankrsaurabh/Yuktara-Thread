@@ -4,7 +4,7 @@ The **Desktop Bundles** GitHub Actions workflow can produce portable, self-conta
 
 ## Build
 
-Run the workflow manually from GitHub Actions, or push a version tag beginning with v. Each platform uploads a separate workflow artifact:
+Run the workflow manually from GitHub Actions, or push a version tag beginning with v. Each platform uploads a separate workflow artifact and a SHA-256 checksum file:
 
 - Windows: yuktara-thread-windows.zip
 - macOS: yuktara-thread-macos.zip containing YuktaraThread.app
