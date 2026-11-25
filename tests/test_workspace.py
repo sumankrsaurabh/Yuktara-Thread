@@ -12,6 +12,27 @@ def test_workspace_migrates_and_creates_project(tmp_path: Path) -> None:
     initial = workspace.context.history(project.project_id, "goals")
     assert len(initial) == 1 and initial[0]["revision"] == 1
 
+def test_existing_schema_version_three_workspace_upgrades_to_import_journal(
+    tmp_path: Path,
+) -> None:
+    database_path = tmp_path / "upgrade.sqlite3"
+    original = WorkspaceService(database_path)
+    project = original.create_project("Keep existing data")
+    with original.database.transaction() as connection:
+        connection.execute("DROP TABLE handover_imports")
+        connection.execute("DELETE FROM schema_migrations WHERE version = 4")
+
+    upgraded = WorkspaceService(database_path)
+
+    assert upgraded.schema_version == 4
+    assert upgraded.projects.get(project.project_id).name == "Keep existing data"
+    with upgraded.database.read() as connection:
+        table = connection.execute(
+            "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'handover_imports'"
+        ).fetchone()
+    assert table is not None
+
+
 def test_project_update_and_archive(tmp_path: Path) -> None:
     workspace = WorkspaceService(tmp_path / "workspace.sqlite3")
     project = workspace.create_project("Initial")
