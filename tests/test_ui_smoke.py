@@ -11,7 +11,7 @@ from PySide6.QtWidgets import QApplication, QFileDialog, QInputDialog, QLabel, Q
 from yuktara_thread.domain.models import ProjectContext
 from yuktara_thread.infrastructure.package import create_package, preview_package
 from yuktara_thread.ui.main_window import (
-    ActivityPanel, EntityEditorDialog, EntityPanel, MainWindow, PackagePreviewDialog,
+    ActivityPanel, EntityEditorDialog, EntityPanel, MainWindow, PackagePreviewDialog, ReadinessPanel,
 )
 
 
@@ -211,3 +211,29 @@ def test_package_preview_imports_project_into_workspace(tmp_path, application, m
     assert selected == [projects[0].project_id]
     assert (destination_parent / "ui-import" / "files" / "README.md").read_text(encoding="utf-8") == "Workspace handover"
     dispose_widget(dialog, application)
+
+
+def test_project_overview_displays_refreshable_readiness_checks(tmp_path, application):
+    window = MainWindow(tmp_path / "readiness-ui.sqlite3")
+    project = window.workspace.create_project("Readiness UI", "A test project")
+    window.refresh_projects(project.project_id)
+    tabs = window.project_page.findChild(QTabWidget)
+    panel = tabs.widget(0).findChild(ReadinessPanel)
+    assert panel is not None
+    assert "Incomplete" in panel.summary.text()
+    initial_score = int(panel.summary.text().split("%", 1)[0])
+
+    for key, content in {
+        "goals": "Ship a stable MVP",
+        "current_state": "Core implementation is complete",
+        "handover_notes": "Run the test suite before release",
+    }.items():
+        section = next(s for s in window.workspace.get_context(project.project_id) if s.section_key == key)
+        window.workspace.save_context(
+            project.project_id, key, content, expected_revision=section.revision
+        )
+
+    panel.refresh()
+    assert "Needs Attention" in panel.summary.text()
+    assert int(panel.summary.text().split("%", 1)[0]) > initial_score
+    dispose_widget(window, application)
