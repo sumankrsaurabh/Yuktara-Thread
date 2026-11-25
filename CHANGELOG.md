@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.6.5.dev0 — 2026-11-25
+
+### Added
+- Failed workspace imports now report the failing phase and verify whether extracted files were removed.
+- When automatic cleanup fails, the error identifies the retained directory and instructs the operator to confirm that no project was created before manual recovery.
+- Regression coverage for failed database imports whose extracted files cannot be cleaned up.
+
+### Limitations
+- Recovery diagnostics are emitted to the caller; a durable cross-process import journal and automatic interrupted-import recovery are not yet implemented.
+
 All notable changes to Yuktara Thread are documented here. Development versions may change before a stable release.
 
 ## 0.6.4.dev0 — 2026-11-25
