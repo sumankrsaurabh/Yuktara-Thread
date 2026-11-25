@@ -11,7 +11,7 @@ Yuktara Thread is a local-first project continuity and handover platform. It pre
 - No account or cloud service required for core workflows.
 - No automatic synchronization or silent data transfer.
 - AI is optional and requires explicit approval before data transfer.
-- Portable `.thread` packages with SHA-256 integrity checks.
+- Portable `.thread` packages with SHA-256 integrity checks; verification rejects case-folding and Unicode-normalization path collisions, file/directory prefix conflicts, duplicate JSON keys and non-standard numeric constants.
 - Non-destructive import inspection with project/context/count comparison and duplicate warnings; current imports always create a separate project.
 - Importing a package must never execute its contents.
 
