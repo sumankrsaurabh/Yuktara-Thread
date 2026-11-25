@@ -356,6 +356,7 @@ class TaskDependencyGraphDialog(QDialog):
                 f"{task['title']}\n{str(task.get('status', 'open')).replace('_', ' ').title()}"
             )
             label.setDefaultTextColor(QColor("#20242B"))
+            label.setTextWidth(176)
             label.setPos(x + 10, y + 10)
             label.setZValue(2)
             self.node_items[task_id] = card
@@ -366,7 +367,7 @@ class TaskDependencyGraphDialog(QDialog):
         height = max((y for _x, y in positions.values()), default=0) + 180
         self.scene.setSceneRect(0, 0, max(width, 520), max(height, 260))
         note = QLabel(
-            "Arrows point from a prerequisite to the task that depends on it. "
+            "Lines connect each prerequisite to the task that depends on it. "
             "This view is read-only; edit relationships in the Tasks tab."
         )
         note.setObjectName("muted")
