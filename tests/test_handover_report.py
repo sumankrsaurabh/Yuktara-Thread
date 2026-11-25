@@ -52,12 +52,19 @@ def test_report_includes_decision_task_and_dependency_details() -> None:
                 {"task_id": "b", "title": "Build repository", "status": "open", "priority": "normal"},
             ],
             "task_dependencies": [{"task_id": "b", "depends_on_task_id": "a"}],
+            "handover_readiness": {
+                "score": 85, "status": "needs_attention",
+                "missing_required": [], "missing_recommended": ["references"],
+            },
             "milestones": [{"title": "MVP", "status": "planned"}],
             "references": [{"title": "Design notes", "reference_type": "document", "uri": "docs/design.md"}],
         },
         "files": [],
     })
 
+    assert "## Handover readiness" in report
+    assert "85% completeness indicator" in report
+    assert "references" in report
     assert "## Decisions" in report
     assert "Rationale: Transactional" in report
     assert "## Tasks" in report
