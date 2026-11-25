@@ -54,3 +54,17 @@ Perform on a clean user account or clean virtual machine for each platform:
 ## Current release blockers
 
 The repository is still pre-alpha. Portable PyInstaller bundles are unsigned; platform-specific installers and code signing are not yet provided. Encryption, package signatures, independent security review and interactive human QA are not complete. Do not describe the current build as production-ready until the applicable checklist items have been completed and recorded.
+
+
+## Interrupted or failed workspace imports
+
+Workspace imports extract package files into a new destination before committing project records in a single SQLite transaction. On a handled failure after extraction, the application attempts to remove that destination and verifies whether it is gone.
+
+If the error reports that the extracted files could not be removed automatically:
+
+1. Do not retry into the same destination directory.
+2. Open the workspace and confirm that the incoming project was not created. The database transaction should have rolled back; verify the project list before proceeding.
+3. Inspect the exact recovery directory reported by the error. Preserve any files you need, then remove the directory or move it aside.
+4. Retry the import using a new, empty destination directory.
+
+If the process or machine loses power between publishing the extracted directory and committing the database transaction, this version does not have a durable import journal to reconcile that interruption automatically. Check the workspace and destination directory manually before retrying. Never delete an existing destination unless you have confirmed it belongs to the failed import.
