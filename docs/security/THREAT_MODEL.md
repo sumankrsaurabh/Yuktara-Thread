@@ -19,16 +19,18 @@
 
 ## Current mitigations
 
-- Archive path normalization and traversal rejection.
-- Symlink and duplicate-entry rejection.
+- Canonical archive path validation, traversal rejection and Windows-reserved-name rejection.
+- Symlink, special-file, directory-entry and duplicate-entry rejection.
 - File-count and uncompressed-size limits.
-- SHA-256 verification.
-- No extraction or execution during verification.
+- SHA-256 verification of every declared file.
+- No extraction or execution during verification or preview.
+- Staged extraction into a new destination directory; existing destinations are not overwritten.
+- Manifest recheck and per-file size/hash recheck while extracting; failed staging directories are removed.
 
 ## Planned mitigations
 
 - Secret scanning and inclusion review.
-- Transactional import with conflict handling.
+- Workspace-aware transactional import with conflict handling (current safe extraction publishes files only; it does not import structured workspace records).
 - Explicit provider/data/retention consent before AI transfer.
 - Optional authenticated encryption and digital signatures using established libraries.
 - Security tests, dependency review and external assessment.
