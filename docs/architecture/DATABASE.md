@@ -39,4 +39,6 @@ Context saves use optimistic concurrency: callers provide the revision they orig
 
 ## Backups and recovery
 
-Database backup/restore, corruption recovery and schema downgrade are not implemented. Users should keep independent backups of important workspace data.
+Application-level backup uses SQLite's online backup API to capture a consistent snapshot, including committed WAL contents, without copying a live database file directly. The snapshot is validated with SQLite integrity and foreign-key checks plus required table and migration-history checks. Restore validates the source and publishes it to a new destination path only; existing files are never overwritten. The CLI and desktop shell expose backup and restore actions.
+
+Backups are not encrypted or compressed. They contain the same project data as the original workspace and must be protected accordingly. Restore does not repair a corrupt source database, downgrade a schema, merge into an existing workspace or resolve application-level conflicts. Users should retain independent copies on separate storage.
