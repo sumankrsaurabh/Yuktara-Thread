@@ -230,3 +230,27 @@ def test_deleted_record_purge_rejects_invalid_retention_days(tmp_path):
     project = workspace.create_project("Invalid retention")
     with pytest.raises(ValueError, match="between 1 and 36,500"):
         workspace.purge_deleted_records(project.project_id, "task", older_than_days=0)
+
+
+def test_timeline_cursor_pages_are_complete_and_non_overlapping(workspace):
+    service, project = workspace
+    for index in range(7):
+        service.intelligence.create_task(project.project_id, title=f"Task {index}")
+
+    first_page = service.intelligence.timeline(project.project_id, limit=4)
+    assert len(first_page) == 4
+    oldest = first_page[-1]
+    second_page = service.intelligence.timeline(
+        project.project_id, limit=4,
+        before=(oldest["created_at"], oldest["event_id"]),
+    )
+    assert len(second_page) == 4
+    assert {event["event_id"] for event in first_page}.isdisjoint(
+        event["event_id"] for event in second_page
+    )
+    combined = first_page + second_page
+    assert combined == service.intelligence.timeline(project.project_id, limit=8)
+    assert service.intelligence.timeline(
+        project.project_id, limit=4,
+        before=(second_page[-1]["created_at"], second_page[-1]["event_id"]),
+    ) == []
