@@ -16,8 +16,6 @@ All notable changes to Yuktara Thread are documented here. Development versions 
 - Comparison is read-only and advisory. It does not merge, replace or automatically reconcile records.
 
 
-All notable changes to Yuktara Thread are documented here. Development versions may change before a stable release.
-
 ## 0.6.3.dev0 — 2026-11-25
 
 ### Added
