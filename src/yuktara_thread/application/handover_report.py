@@ -83,7 +83,7 @@ def render_handover_report(preview: dict[str, Any]) -> str:
                 f"- Problem: {_text(decision.get('problem') or 'Not recorded')}",
                 f"- Selected option: {_text(decision.get('selected_option') or 'Not recorded')}",
                 f"- Rationale: {_text(decision.get('rationale') or 'Not recorded')}",
-                f"- Alternatives: {', '.join(_text(item) for item in decision.get('alternatives', [])) or 'Not recorded'}",
+                f"- Alternatives: {', '.join(_text(item) for item in _strings(decision.get('alternatives', []))) or 'Not recorded'}",
                 f"- Consequences: {_text(decision.get('consequences') or 'Not recorded')}",
                 "",
             ])
