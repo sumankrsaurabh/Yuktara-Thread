@@ -48,6 +48,19 @@ Archive a project by its ID:
 thread project archive --database ./workspace.sqlite3 --project-id PROJECT_UUID
 ```
 
+## Desktop application
+
+Install the optional desktop dependency and launch the native workspace:
+
+```bash
+python -m pip install -e ".[desktop]"
+thread desktop --database ./workspace.sqlite3
+```
+
+The equivalent dedicated launcher is `thread-desktop --database ./workspace.sqlite3`. The database path is explicit; the application does not silently create a hidden workspace.
+
+The initial desktop shell includes project selection and creation, structured context editing with revision conflict protection, decision/task/milestone/reference lists with basic create/rename/delete actions, and the project activity timeline. It is an early UI foundation; keyboard accessibility, advanced forms, responsive layouts, package import/export workflows and installer validation remain future work.
+
 ## Notes
 
 - The database path is selected by the user; no hidden default workspace is created.
