@@ -11,6 +11,7 @@ from PySide6.QtWidgets import (
 )
 
 from yuktara_thread.application.backup import backup_workspace, restore_workspace
+from yuktara_thread.application.handover import export_workspace_project
 from yuktara_thread.application.secret_scan import scan_selected_files
 from yuktara_thread.application.workspace import WorkspaceService
 from yuktara_thread.infrastructure.package import PackageError, preview_package
