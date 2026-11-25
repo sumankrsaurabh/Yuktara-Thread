@@ -44,6 +44,7 @@ Workspace-aware export stores these fields inside `project`:
 - `activity_events`: up to 1,000 recent event records.
 - `handover_readiness`: deterministic completeness assessment calculated at export time. It is informational and does not certify correctness or safety.
 - `handover_schema_version`: 1.
+- `handover_readiness`: optional deterministic completeness result captured at export time; it is a documentation aid, not a safety or correctness certification.
 
 The SQLite database itself is never packaged. Context revision bodies are not currently exported. Activity events are included in the package and report; workspace import records their source count in the import event rather than replaying the source audit history.
 
