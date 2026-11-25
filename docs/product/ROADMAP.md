@@ -36,7 +36,8 @@
 - [x] Markdown handover report and recipient-side import workflow.
 - [ ] Full source activity-history replay and historical context revision-body export.
 - [x] Human-readable handover report with decisions, tasks, milestones, references and context.
-- [ ] Secret inclusion warnings and readiness checks.
+- [x] Deterministic handover readiness checks and report indicator.
+- [ ] Secret inclusion warnings and inclusion review.
 - [ ] Windows/Linux/macOS packaging and platform QA.
 
 ## P4 — Optional intelligence and collaboration
