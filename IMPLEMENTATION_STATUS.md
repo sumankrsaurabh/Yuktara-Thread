@@ -23,7 +23,9 @@
 - [x] Structured desktop forms for decision, task, milestone and reference fields.
 - [x] Offscreen Qt smoke tests covering window startup, structured forms, task prerequisites, project archiving and activity filtering.
 - [x] Desktop package preview dialog with explicit file extraction to a user-selected new folder.
-- [x] Markdown handover report generated from verified package metadata and file inventory.
+- [x] Markdown handover report generated from verified package metadata, file inventory and structured project context.
+- [x] Workspace-aware package export for context sections, decisions, tasks, milestones, references, task dependencies and recent activity.
+- [x] CLI command for workspace-aware project export with an explicit selected-files directory.
 - [x] CLI `preview` and `import` commands for verified packages.
 - [x] Package tests for successful extraction, tamper rejection, existing destinations and unsafe paths.
 - [x] Dedicated Linux desktop CI job; PySide6 6.9 runtime smoke tests pass without shutdown errors.
@@ -35,7 +37,8 @@
 - [ ] Archived-project restore UI.
 - [ ] Task dependency graph visualization.
 - [ ] Activity date-range filters and export.
-- [ ] Workspace-aware package export/import for context sections, decisions, tasks, milestones, references and activity history.
+- [ ] Recipient-side workspace import with transactional database restoration and conflict handling.
+- [ ] Historical context revision-body export and configurable activity-history limits.
 - [ ] Readiness scoring and completeness checks.
 - [ ] Search, backup and recovery workflows.
 - [ ] Encryption, signatures and key management.
