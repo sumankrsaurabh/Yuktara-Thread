@@ -110,3 +110,35 @@ def test_project_import_cli_restores_handover_into_workspace(tmp_path: Path, cap
     assert len(restored) == 1
     assert receiving_workspace.intelligence.list_records(restored[0].project_id, "task")[0]["title"] == "Review imported data"
     assert (files_destination / "files" / "guide.md").read_text(encoding="utf-8") == "Read me first"
+
+
+def test_project_export_requires_explicit_override_for_potential_secrets(tmp_path: Path, capsys) -> None:
+    database = tmp_path / "secret-export.sqlite3"
+    files = tmp_path / "selected-secret-files"
+    files.mkdir()
+    token = "ghp_" + "B" * 36
+    (files / "settings.txt").write_text(
+        f"GITHUB_TOKEN={token}\\n", encoding="utf-8"
+    )
+    assert main(["workspace", "init", "--database", str(database)]) == 0
+    capsys.readouterr()
+    assert main(["project", "create", "--database", str(database), "--name", "Secret review"]) == 0
+    project = json.loads(capsys.readouterr().out)
+    package = tmp_path / "blocked.thread"
+    args = [
+        "project", "export", "--database", str(database),
+        "--project-id", project["project_id"], "--files", str(files),
+        "--output", str(package),
+    ]
+
+    assert main(args) == 3
+    warning = json.loads(capsys.readouterr().out)
+    assert warning["requires_confirmation"] is True
+    assert warning["secret_scan"]["finding_count"] >= 1
+    assert token not in repr(warning)
+    assert not package.exists()
+
+    assert main(args + ["--allow-potential-secrets"]) == 0
+    exported = json.loads(capsys.readouterr().out)
+    assert exported["exported"] is True
+    assert package.is_file()
