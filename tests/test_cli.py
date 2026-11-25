@@ -70,3 +70,43 @@ def test_project_export_cli_includes_workspace_context(tmp_path: Path, capsys) -
     result = json.loads(capsys.readouterr().out)
     assert result["exported"] is True
     assert (tmp_path / "export.thread").is_file()
+
+
+def test_project_import_cli_restores_handover_into_workspace(tmp_path: Path, capsys) -> None:
+    from yuktara_thread.application.workspace import WorkspaceService
+
+    source_db = tmp_path / "source.sqlite3"
+    selected = tmp_path / "selected"
+    selected.mkdir()
+    (selected / "guide.md").write_text("Read me first", encoding="utf-8")
+    assert main(["workspace", "init", "--database", str(source_db)]) == 0
+    capsys.readouterr()
+    assert main(["project", "create", "--database", str(source_db), "--name", "CLI round trip"]) == 0
+    source_project = json.loads(capsys.readouterr().out)
+    source_workspace = WorkspaceService(source_db)
+    source_workspace.intelligence.create_task(
+        source_project["project_id"], title="Review imported data"
+    )
+    package = tmp_path / "roundtrip.thread"
+    assert main([
+        "project", "export", "--database", str(source_db),
+        "--project-id", source_project["project_id"], "--files", str(selected),
+        "--output", str(package),
+    ]) == 0
+    capsys.readouterr()
+
+    receiving_db = tmp_path / "receiving.sqlite3"
+    files_destination = tmp_path / "received-files"
+    assert main([
+        "project", "import", "--database", str(receiving_db),
+        "--package", str(package), "--files-destination", str(files_destination),
+    ]) == 0
+    imported = json.loads(capsys.readouterr().out)
+    receiving_workspace = WorkspaceService(receiving_db)
+
+    assert imported["imported"] is True
+    assert imported["name"] == "CLI round trip"
+    restored = receiving_workspace.list_projects()
+    assert len(restored) == 1
+    assert receiving_workspace.intelligence.list_records(restored[0].project_id, "task")[0]["title"] == "Review imported data"
+    assert (files_destination / "files" / "guide.md").read_text(encoding="utf-8") == "Read me first"
