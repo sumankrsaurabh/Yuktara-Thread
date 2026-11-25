@@ -73,6 +73,6 @@ The workspace now keeps a durable import journal. Run:
 thread import-recovery --database /path/to/workspace.sqlite3
 ```
 
-The command reconciles interrupted imports without deleting project rows or files. If both the imported project and its destination directory exist, the journal is finalized as completed. If neither exists, the attempt is marked failed. If only one exists, the attempt is marked recovery_required and the output identifies the mismatch for manual review. Reconciliation is explicit; it is not run automatically at application startup.
+The command reconciles interrupted imports without deleting project rows or files. If both the imported project and its destination directory exist, the journal is finalized as completed. If neither exists, the attempt is marked failed. If only one exists, the attempt is marked recovery_required and the output identifies the mismatch for manual review. Reconciliation is explicit; it skips attempts updated within the previous five minutes to avoid racing a live import, and it is not run automatically at application startup.
 
 The journal transition to database_committed is committed in the same SQLite transaction as project creation. This prevents a successfully committed project from being misclassified as an uncommitted attempt after a crash. File extraction and the database transaction remain separate filesystem/database operations, so a mismatch still requires operator review. Never delete an existing destination unless you have confirmed it belongs to the failed import.
