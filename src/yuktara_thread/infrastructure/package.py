@@ -123,8 +123,11 @@ def verify_package(package_file: Path) -> dict[str, Any]:
                     raise PackageError(f"Duplicate archive path: {name}")
                 names.add(name)
                 mode = info.external_attr >> 16
-                if stat.S_ISLNK(mode):
-                    raise PackageError(f"Symbolic link entry is not allowed: {name}")
+                file_type = stat.S_IFMT(mode)
+                if stat.S_ISLNK(mode) or file_type not in (0, stat.S_IFREG):
+                    raise PackageError(f"Non-regular archive entry is not allowed: {name}")
+                if info.is_dir():
+                    raise PackageError(f"Directory entries are not supported: {name}")
                 if info.file_size > MAX_FILE_BYTES:
                     raise PackageError(f"Entry exceeds size limit: {name}")
                 total_size += info.file_size
