@@ -119,8 +119,8 @@ def test_archive_control_archives_project_and_removes_it_from_active_list(
 
     assert window.workspace.list_projects() == []
     assert window.workspace.list_projects(include_archived=True)[0].status == "archived"
-    window.close()
-    application.processEvents()
+    assert window.pages.count() == 1
+    dispose_widget(window, application)
 
 
 def test_activity_panel_filters_by_event_type_and_text(tmp_path, application):
