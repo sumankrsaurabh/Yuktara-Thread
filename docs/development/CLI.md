@@ -114,6 +114,22 @@ thread record restore --database ./workspace.sqlite3 \
 
 Restore preserves the original entity ID and appends a `task.restored` (or corresponding entity type) event. Task prerequisite edges remain in place while a task is deleted; dependency creation rejects deleted tasks.
 
+Preview which deleted tasks are older than 30 days (dry-run; no records are removed):
+
+```bash
+thread record purge-deleted --database ./workspace.sqlite3 \
+  --project-id PROJECT_UUID --entity-type task --older-than-days 30
+```
+
+After reviewing the eligible count, permanently purge those records with explicit confirmation:
+
+```bash
+thread record purge-deleted --database ./workspace.sqlite3 \
+  --project-id PROJECT_UUID --entity-type task --older-than-days 30 --confirm
+```
+
+Purging is never automatic. The operation removes only soft-deleted records older than the requested age and appends a permanent `task.purged` audit event. Deleting a task also removes its prerequisite edges through SQLite foreign-key cascades. Activity events are retained indefinitely by default.
+
 Export a complete workspace project as a `.thread` handover package. The selected files directory is explicit; only files inside that directory are included:
 
 ```bash
