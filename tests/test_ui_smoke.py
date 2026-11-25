@@ -6,7 +6,7 @@ import pytest
 PySide6 = pytest.importorskip("PySide6")
 
 from PySide6.QtCore import QCoreApplication, QEvent, Qt
-from PySide6.QtWidgets import QApplication, QFileDialog, QLabel, QMessageBox, QTabWidget
+from PySide6.QtWidgets import QApplication, QFileDialog, QInputDialog, QLabel, QMessageBox, QTabWidget
 
 from yuktara_thread.domain.models import ProjectContext
 from yuktara_thread.infrastructure.package import create_package, preview_package
@@ -180,4 +180,34 @@ def test_package_preview_saves_handover_report(tmp_path, application, monkeypatc
     report = output.read_text(encoding="utf-8")
     assert "# Handover: Report project" in report
     assert "`README.md`" in report
+    dispose_widget(dialog, application)
+
+
+def test_package_preview_imports_project_into_workspace(tmp_path, application, monkeypatch):
+    from yuktara_thread.application.workspace import WorkspaceService
+
+    source = tmp_path / "workspace-import-source"
+    source.mkdir()
+    (source / "README.md").write_text("Workspace handover", encoding="utf-8")
+    package = tmp_path / "workspace-import.thread"
+    create_package(source, package, ProjectContext.create("Imported through UI").to_dict())
+    workspace = WorkspaceService(tmp_path / "ui-import.sqlite3")
+    destination_parent = tmp_path / "received"
+    destination_parent.mkdir()
+    monkeypatch.setattr(QFileDialog, "getExistingDirectory", lambda *_args, **_kwargs: str(destination_parent))
+    monkeypatch.setattr(QInputDialog, "getText", lambda *_args, **_kwargs: ("ui-import", True))
+    monkeypatch.setattr(QMessageBox, "information", lambda *_args, **_kwargs: QMessageBox.StandardButton.Ok)
+    selected = []
+    dialog = PackagePreviewDialog(
+        package, preview_package(package), workspace=workspace,
+        on_import=selected.append,
+    )
+
+    dialog.import_to_workspace()
+
+    projects = workspace.list_projects()
+    assert len(projects) == 1
+    assert projects[0].name == "Imported through UI"
+    assert selected == [projects[0].project_id]
+    assert (destination_parent / "ui-import" / "files" / "README.md").read_text(encoding="utf-8") == "Workspace handover"
     dispose_widget(dialog, application)
