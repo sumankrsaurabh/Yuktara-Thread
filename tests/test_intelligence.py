@@ -180,3 +180,53 @@ def test_soft_deleted_record_cannot_be_edited_until_restored(tmp_path):
 
     restored = workspace.restore_record(project.project_id, "task", task["task_id"])
     assert restored["title"] == "Do not edit"
+
+
+
+def test_deleted_record_purge_requires_confirmation_and_preserves_audit_event(tmp_path):
+    from datetime import datetime, timedelta, timezone
+    from yuktara_thread.application.workspace import WorkspaceService
+
+    workspace = WorkspaceService(tmp_path / "purge.sqlite3")
+    project = workspace.create_project("Retention policy")
+    task = workspace.intelligence.create_task(project.project_id, title="Expired task")
+    workspace.intelligence.delete_record(project.project_id, "task", task["task_id"])
+    expired = (datetime.now(timezone.utc) - timedelta(days=90)).isoformat()
+    with workspace.database.transaction() as connection:
+        connection.execute(
+            "UPDATE tasks SET deleted_at = ? WHERE task_id = ?",
+            (expired, task["task_id"]),
+        )
+
+    preview = workspace.purge_deleted_records(
+        project.project_id, "task", older_than_days=30
+    )
+    assert preview["purged"] is False
+    assert preview["eligible_count"] == 1
+    assert len(workspace.intelligence.list_records(
+        project.project_id, "task", include_deleted=True
+    )) == 1
+
+    result = workspace.purge_deleted_records(
+        project.project_id, "task", older_than_days=30, confirm=True
+    )
+    assert result["purged"] is True
+    assert result["purged_count"] == 1
+    assert workspace.intelligence.list_records(
+        project.project_id, "task", include_deleted=True
+    ) == []
+    event_types = [
+        event["event_type"] for event in workspace.intelligence.timeline(project.project_id)
+    ]
+    assert "task.deleted" in event_types
+    assert "task.purged" in event_types
+
+
+def test_deleted_record_purge_rejects_invalid_retention_days(tmp_path):
+    from yuktara_thread.application.workspace import WorkspaceService
+    import pytest
+
+    workspace = WorkspaceService(tmp_path / "invalid-purge.sqlite3")
+    project = workspace.create_project("Invalid retention")
+    with pytest.raises(ValueError, match="between 1 and 36,500"):
+        workspace.purge_deleted_records(project.project_id, "task", older_than_days=0)
