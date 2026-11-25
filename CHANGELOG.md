@@ -2,6 +2,18 @@
 
 All notable changes to Yuktara Thread are documented here. Development versions may change before a stable release.
 
+## 0.6.1.dev0 — 2026-11-25
+
+### Added
+- Accessible names and descriptions for key workspace, project, context, intelligence and activity controls.
+- Predictable keyboard tab order through the main workspace sidebar.
+- Window-level shortcuts: Ctrl+N to create a project, Ctrl+K to search, and Ctrl+O to preview a .thread package.
+- Offscreen UI regression coverage for accessible names, focusability and shortcut registration.
+
+### Limitations
+- This is an initial accessibility foundation, not a completed accessibility audit. Screen-reader, contrast, focus-indicator and real-platform assistive-technology testing remain required.
+
+
 ## 0.6.0.dev0 — 2026-11-25
 
 ### Added
