@@ -353,8 +353,13 @@ def test_archived_projects_dialog_restores_project_and_refreshes_workspace(
     window.refresh_projects()
 
     restored_ids = []
+
+    def on_restored(project_id):
+        restored_ids.append(project_id)
+        window.refresh_projects(project_id)
+
     dialog = ArchivedProjectsDialog(
-        window.workspace, on_restored=restored_ids.append, parent=window
+        window.workspace, on_restored=on_restored, parent=window
     )
     assert dialog.projects.count() == 1
     dialog.projects.setCurrentRow(0)
