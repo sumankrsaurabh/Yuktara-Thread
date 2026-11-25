@@ -1,6 +1,6 @@
 # Implementation Status
 
-**Release:** 0.6.0.dev0  
+**Release:** 0.6.1.dev0  
 **Status:** pre-alpha; not production-ready
 
 ## Implemented
@@ -20,6 +20,7 @@
 - [x] Task prerequisite relationships with cross-project, self-link and cycle rejection, plus audited edge removal.
 - [x] Bounded project activity timeline query.
 - [x] Modular PySide6 desktop application with first-run workspace selection, project navigation, context editors, intelligence panels, dialogs and activity timeline.
+- [x] Initial accessibility improvements: descriptive accessible names, accessible descriptions for key controls, predictable sidebar tab order, and Ctrl+N / Ctrl+K / Ctrl+O shortcuts.
 - [x] Project metadata editing and audited project archiving from the desktop UI.
 - [x] Archived-project inspection and audited restoration from the desktop UI and CLI.
 - [x] Task prerequisite add/remove controls using cycle-safe application services.
@@ -48,7 +49,7 @@
 - [x] Portable unsigned desktop bundles built successfully on Windows, macOS and Linux in CI.
 
 ## Not yet implemented
-- [ ] Desktop accessibility and keyboard interaction audit.
+- [ ] Complete desktop accessibility and keyboard interaction audit, including screen-reader testing, focus visibility, contrast and platform-specific assistive technology.
 - [ ] Configurable activity-history limits and paginated exports.
 - [ ] Import conflict resolution and merge/replace workflows.
 - [ ] Broader secret coverage, configurable exclusions, and independent validation of secret-scan false positives/negatives.
@@ -58,4 +59,4 @@
 - [ ] Independent security review and interactive release qualification.
 
 ## Verification
-Core tests pass on Python 3.11, 3.12 and 3.13. Offscreen desktop smoke tests and PyInstaller bundle builds passed on Windows, macOS and Linux in run 45603548295. Wheel and source distributions also build and pass Twine metadata checks. The modular UI refactor and activity refresh change are undergoing a newer CI run. Automated CI does not replace interactive manual QA, accessibility validation, signing/notarization or release qualification.
+Core tests pass on Python 3.11, 3.12 and 3.13. Offscreen desktop smoke tests and PyInstaller bundle builds passed on Windows, macOS and Linux in run 45603548295. Wheel and source distributions also build and pass Twine metadata checks. The latest modular UI, activity refresh and accessibility changes are undergoing CI verification. Automated CI does not replace interactive manual QA, accessibility validation, signing/notarization or release qualification.
