@@ -94,6 +94,26 @@ thread project restore --database ./workspace.sqlite3 --project-id PROJECT_UUID
 
 The restore command only accepts archived projects. It returns the original project to the active list and appends a `project.restored` activity event.
 
+## Recover deleted project records
+
+Decisions, tasks, milestones and references use soft deletion. Normal record lists omit deleted items; their IDs and data remain in the local database until a future retention/purge policy is introduced.
+
+List deleted tasks in a project:
+
+```bash
+thread record list-deleted --database ./workspace.sqlite3 \
+  --project-id PROJECT_UUID --entity-type task
+```
+
+Restore a deleted task (the entity type can also be `decision`, `milestone` or `reference`):
+
+```bash
+thread record restore --database ./workspace.sqlite3 \
+  --project-id PROJECT_UUID --entity-type task --entity-id ENTITY_UUID
+```
+
+Restore preserves the original entity ID and appends a `task.restored` (or corresponding entity type) event. Task prerequisite edges remain in place while a task is deleted; dependency creation rejects deleted tasks.
+
 Export a complete workspace project as a `.thread` handover package. The selected files directory is explicit; only files inside that directory are included:
 
 ```bash
@@ -133,7 +153,7 @@ thread desktop --database ./workspace.sqlite3
 
 The equivalent dedicated launcher is `thread-desktop --database ./workspace.sqlite3`. The database path is explicit; the application does not silently create a hidden workspace.
 
-The current desktop foundation includes project selection and creation, six structured context editors with revision conflict protection, and tabs for decisions, tasks, milestones, references and project activity. Each intelligence tab supports create, edit and delete; the forms expose the structured fields stored by the domain layer. Deletions are recorded in project history.
+The current desktop foundation includes project selection and creation, six structured context editors with revision conflict protection, and tabs for decisions, tasks, milestones, references and project activity. Each intelligence tab supports create, edit and delete; the forms expose the structured fields stored by the domain layer. Deletions are soft-deleted in the service layer and recorded in project history. Deleted-record recovery is currently available through the CLI; a dedicated desktop recovery view is still pending.
 
 The UI remains pre-alpha. Project metadata editing and archive controls are available; archiving retains project data and removes the project from the active list. Task prerequisites can be added and removed from the Tasks tab; the service layer rejects self-links, cross-project links and cycles. Activity supports text search and event-type filtering. The desktop shell can preview verified packages, save a Markdown handover report, extract files to a new folder, or import a package as a new project into the current workspace. The report includes project context, decisions, tasks, milestones, references, dependency details, a deterministic completeness indicator, file inventory and a recipient checklist. The indicator is not a guarantee of correctness or safety, and the report does not prove publisher identity. A dependency graph visualization, activity date-range filters/export, keyboard/accessibility validation and installer validation are not complete.
 
