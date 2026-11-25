@@ -145,7 +145,7 @@ class ProjectIntelligenceRepository:
         return self._decode(entity_type, dict(row))
 
     def delete_record(self, project_id: str, entity_type: str, entity_id: str) -> None:
-        """Delete an entity, preserving a minimal deletion event in the same transaction."""
+        """Soft-delete an entity so it can be restored without losing its identity."""
         if entity_type not in self.TABLES:
             raise ValueError("Unknown project entity type")
         table, id_column = self.TABLES[entity_type]
@@ -155,31 +155,64 @@ class ProjectIntelligenceRepository:
             if project is None or project["status"] != "active":
                 raise LookupError("Active project not found")
             row = connection.execute(
-                f"SELECT title FROM {table} WHERE {id_column} = ? AND project_id = ?",
+                f"SELECT title FROM {table} WHERE {id_column} = ? AND project_id = ? AND deleted_at IS NULL",
                 (entity_id, project_id),
             ).fetchone()
             if row is None:
-                raise LookupError(f"{entity_type.title()} not found")
+                raise LookupError(f"Active {entity_type} not found")
             append_project_event(connection, project_id=project_id, event_type=f"{entity_type}.deleted",
                 entity_type=entity_type, entity_id=entity_id, payload={"title": row["title"]}, created_at=now)
-            connection.execute(f"DELETE FROM {table} WHERE {id_column} = ? AND project_id = ?",
-                               (entity_id, project_id))
+            connection.execute(
+                f"UPDATE {table} SET deleted_at = ?, updated_at = ? WHERE {id_column} = ? AND project_id = ?",
+                (now, now, entity_id, project_id),
+            )
 
-    def list_records(self, project_id: str, entity_type: str) -> list[dict[str, object]]:
+    def restore_record(self, project_id: str, entity_type: str, entity_id: str) -> dict[str, object]:
+        """Restore a soft-deleted entity and append an audit event atomically."""
+        if entity_type not in self.TABLES:
+            raise ValueError("Unknown project entity type")
+        table, id_column = self.TABLES[entity_type]
+        now = _now()
+        with self.database.transaction() as connection:
+            project = connection.execute("SELECT status FROM projects WHERE project_id = ?", (project_id,)).fetchone()
+            if project is None or project["status"] != "active":
+                raise LookupError("Active project not found")
+            cursor = connection.execute(
+                f"UPDATE {table} SET deleted_at = NULL, updated_at = ? "
+                f"WHERE {id_column} = ? AND project_id = ? AND deleted_at IS NOT NULL",
+                (now, entity_id, project_id),
+            )
+            if cursor.rowcount != 1:
+                raise LookupError(f"Deleted {entity_type} not found")
+            append_project_event(connection, project_id=project_id, event_type=f"{entity_type}.restored",
+                entity_type=entity_type, entity_id=entity_id, payload={}, created_at=now)
+            row = connection.execute(
+                f"SELECT * FROM {table} WHERE {id_column} = ? AND project_id = ?",
+                (entity_id, project_id),
+            ).fetchone()
+        return self._decode(entity_type, dict(row))
+
+    def list_records(self, project_id: str, entity_type: str, *,
+                     include_deleted: bool = False) -> list[dict[str, object]]:
         if entity_type not in self.TABLES:
             raise ValueError("Unknown project entity type")
         table, _ = self.TABLES[entity_type]
+        condition = "" if include_deleted else " AND deleted_at IS NULL"
         with self.database.read() as connection:
             rows = connection.execute(
-                f"SELECT * FROM {table} WHERE project_id = ? ORDER BY created_at DESC", (project_id,)
+                f"SELECT * FROM {table} WHERE project_id = ?{condition} ORDER BY created_at DESC",
+                (project_id,),
             ).fetchall()
+        return self._decode_rows(entity_type, rows)
+
+    def _decode_rows(self, entity_type: str, rows) -> list[dict[str, object]]:
         return [self._decode(entity_type, dict(row)) for row in rows]
 
     def add_task_dependency(self, project_id: str, task_id: str, depends_on_task_id: str) -> None:
         now = _now()
         with self.database.transaction() as connection:
             rows = connection.execute(
-                "SELECT task_id FROM tasks WHERE project_id = ? AND task_id IN (?, ?)",
+                "SELECT task_id FROM tasks WHERE project_id = ? AND deleted_at IS NULL AND task_id IN (?, ?)",
                 (project_id, task_id, depends_on_task_id),
             ).fetchall()
             if len(rows) != 2 or task_id == depends_on_task_id:
