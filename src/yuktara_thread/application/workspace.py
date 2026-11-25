@@ -8,6 +8,7 @@ from yuktara_thread.infrastructure.database.connection import Database
 from yuktara_thread.infrastructure.database.migrations import apply_migrations
 from yuktara_thread.infrastructure.database.repositories.context import ContextRepository
 from yuktara_thread.infrastructure.database.repositories.projects import ProjectRepository
+from yuktara_thread.infrastructure.database.repositories.intelligence import ProjectIntelligenceRepository
 
 
 class WorkspaceService:
@@ -19,6 +20,7 @@ class WorkspaceService:
             self.schema_version = apply_migrations(connection)
         self.projects = ProjectRepository(self.database)
         self.context = ContextRepository(self.database)
+        self.intelligence = ProjectIntelligenceRepository(self.database)
 
     def create_project(self, name: str, summary: str = "") -> Project:
         project = self.projects.create(name, summary)
@@ -37,9 +39,6 @@ class WorkspaceService:
     def get_context(self, project_id: str) -> list[ContextSection]:
         return self.context.list_for_project(project_id)
 
-    def save_context(
-        self, project_id: str, section_key: str, content: str, *, expected_revision: int
-    ) -> ContextSection:
-        return self.context.save(
-            project_id, section_key, content, expected_revision=expected_revision
-        )
+    def save_context(self, project_id: str, section_key: str, content: str, *,
+                     expected_revision: int) -> ContextSection:
+        return self.context.save(project_id, section_key, content, expected_revision=expected_revision)
