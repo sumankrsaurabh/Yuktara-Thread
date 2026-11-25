@@ -228,7 +228,7 @@ def test_workspace_import_restores_context_records_dependencies_and_files(tmp_pa
 def test_import_reconciliation_preserves_orphaned_files_for_manual_review(
     tmp_path: Path,
 ) -> None:
-    from datetime import datetime, timezone
+    from datetime import datetime, timedelta, timezone
     from uuid import uuid4
     from yuktara_thread.application.handover import reconcile_workspace_imports
 
@@ -236,7 +236,7 @@ def test_import_reconciliation_preserves_orphaned_files_for_manual_review(
     destination = tmp_path / "orphaned-files"
     destination.mkdir()
     (destination / "README.md").write_text("Keep for review", encoding="utf-8")
-    now = datetime.now(timezone.utc).isoformat()
+    now = (datetime.now(timezone.utc) - timedelta(minutes=10)).isoformat()
     import_id = str(uuid4())
     project_id = str(uuid4())
     with workspace.database.transaction() as connection:
@@ -258,8 +258,35 @@ def test_import_reconciliation_preserves_orphaned_files_for_manual_review(
     assert result[0]["error"]
 
 
-def test_import_reconciliation_marks_committed_project_complete(tmp_path: Path) -> None:
+
+def test_import_reconciliation_skips_recent_active_attempts(tmp_path: Path) -> None:
     from datetime import datetime, timezone
+    from uuid import uuid4
+    from yuktara_thread.application.handover import reconcile_workspace_imports
+
+    workspace = WorkspaceService(tmp_path / "workspace.sqlite3")
+    now = datetime.now(timezone.utc).isoformat()
+    import_id = str(uuid4())
+    destination = tmp_path / "active-destination"
+    with workspace.database.transaction() as connection:
+        connection.execute(
+            """INSERT INTO handover_imports
+               (import_id, project_id, package_manifest_sha256, destination_path,
+                status, phase, error, created_at, updated_at)
+               VALUES (?, ?, ?, ?, 'extracting', 'file_extraction', NULL, ?, ?)""",
+            (import_id, str(uuid4()), "c" * 64, str(destination), now, now),
+        )
+
+    assert reconcile_workspace_imports(workspace) == []
+    with workspace.database.read() as connection:
+        status = connection.execute(
+            "SELECT status FROM handover_imports WHERE import_id = ?", (import_id,)
+        ).fetchone()["status"]
+    assert status == "extracting"
+
+
+def test_import_reconciliation_marks_committed_project_complete(tmp_path: Path) -> None:
+    from datetime import datetime, timedelta, timezone
     from uuid import uuid4
     from yuktara_thread.application.handover import reconcile_workspace_imports
 
@@ -267,7 +294,7 @@ def test_import_reconciliation_marks_committed_project_complete(tmp_path: Path) 
     project = workspace.create_project("Committed project")
     destination = tmp_path / "committed-files"
     destination.mkdir()
-    now = datetime.now(timezone.utc).isoformat()
+    now = (datetime.now(timezone.utc) - timedelta(minutes=10)).isoformat()
     import_id = str(uuid4())
     with workspace.database.transaction() as connection:
         connection.execute(
