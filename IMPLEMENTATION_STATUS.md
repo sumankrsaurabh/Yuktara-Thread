@@ -27,6 +27,7 @@
 - [x] Markdown handover report generated from verified package metadata, file inventory, structured project context and readiness assessment.
 - [x] Deterministic AI-free handover readiness checks in project overview and exported reports.
 - [x] Local bounded secret-pattern scan before CLI and desktop export; findings do not reveal matched values and require explicit acknowledgement.
+- [x] SQLite online backup and validated restore to a new database path, with no-overwrite publication in CLI and desktop.
 - [x] Workspace-aware package export for context sections, decisions, tasks, milestones, references, task dependencies and recent activity.
 - [x] CLI command for workspace-aware project export with an explicit selected-files directory.
 - [x] Recipient-side workspace import with new local IDs, context/record restoration and task dependency remapping.
