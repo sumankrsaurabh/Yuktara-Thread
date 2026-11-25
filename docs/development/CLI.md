@@ -164,7 +164,7 @@ Reconcile interrupted workspace imports without deleting files or project data:
 thread import-recovery --database ./recipient.sqlite3
 ```
 
-The command finalizes journal entries when both the imported project and extracted directory exist. If neither exists, it marks the attempt failed. If only one exists, it marks the attempt `recovery_required` and reports the mismatch for manual review. Reconciliation is explicit and safe to repeat; it does not automatically remove directories or project records.
+The command finalizes journal entries when both the imported project and extracted directory exist. If neither exists, it marks the attempt failed. If only one exists, it marks the attempt `recovery_required` and reports the mismatch for manual review. Reconciliation is explicit and safe to repeat; it skips attempts updated within the previous five minutes to avoid racing a live import, and it does not automatically remove directories or project records.
 
 ## Desktop application
 
