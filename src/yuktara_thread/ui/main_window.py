@@ -223,7 +223,8 @@ class EntityPanel(QWidget):
 
 
 class ProjectPage(QWidget):
-    def __init__(self, workspace: WorkspaceService, project) -> None:
+    def __init__(self, workspace: WorkspaceService, project, *,
+                 on_edit=None, on_archive=None) -> None:
         super().__init__()
         layout = QVBoxLayout(self)
         title = QLabel(project.name)
@@ -231,8 +232,16 @@ class ProjectPage(QWidget):
         summary = QLabel(project.summary or "No project summary yet.")
         summary.setObjectName("muted")
         summary.setWordWrap(True)
-        layout.addWidget(title)
+        header = QHBoxLayout()
+        header.addWidget(title, 1)
+        self.edit_project = QPushButton("Edit project")
+        self.archive_project = QPushButton("Archive project")
+        header.addWidget(self.edit_project)
+        header.addWidget(self.archive_project)
+        layout.addLayout(header)
         layout.addWidget(summary)
+        self.edit_project.clicked.connect(lambda: on_edit(project) if on_edit else None)
+        self.archive_project.clicked.connect(lambda: on_archive(project) if on_archive else None)
         tabs = QTabWidget()
         layout.addWidget(tabs, 1)
 
@@ -357,6 +366,54 @@ class MainWindow(QMainWindow):
         if self.project_page is not None:
             self.pages.removeWidget(self.project_page)
             self.project_page.deleteLater()
-        self.project_page = ProjectPage(self.workspace, project)
+        self.project_page = ProjectPage(
+            self.workspace, project,
+            on_edit=self.edit_project,
+            on_archive=self.archive_project,
+        )
         self.pages.addWidget(self.project_page)
         self.pages.setCurrentWidget(self.project_page)
+
+    def edit_project(self, project) -> None:
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Edit project")
+        dialog.setMinimumWidth(440)
+        form = QFormLayout(dialog)
+        name = QLineEdit(project.name)
+        summary = QPlainTextEdit(project.summary)
+        summary.setMinimumHeight(100)
+        form.addRow("Project name", name)
+        form.addRow("Summary", summary)
+        actions = QHBoxLayout()
+        actions.addStretch(1)
+        cancel = QPushButton("Cancel")
+        save = QPushButton("Save changes")
+        save.setObjectName("primary")
+        cancel.clicked.connect(dialog.reject)
+        save.clicked.connect(dialog.accept)
+        actions.addWidget(cancel)
+        actions.addWidget(save)
+        form.addRow(actions)
+        if dialog.exec() != QDialog.DialogCode.Accepted:
+            return
+        try:
+            updated = self.workspace.update_project(
+                project.project_id, name.text(), summary.toPlainText()
+            )
+            self.refresh_projects(updated.project_id)
+        except (ValueError, LookupError, RuntimeError) as exc:
+            QMessageBox.warning(self, "Could not update project", str(exc))
+
+    def archive_project(self, project) -> None:
+        answer = QMessageBox.question(
+            self, "Archive project",
+            f"Archive '{project.name}'? It will disappear from the active workspace list. Its data will be retained.",
+        )
+        if answer != QMessageBox.StandardButton.Yes:
+            return
+        try:
+            self.workspace.archive_project(project.project_id)
+            self.project_page = None
+            self.refresh_projects()
+        except (ValueError, LookupError, RuntimeError) as exc:
+            QMessageBox.warning(self, "Could not archive project", str(exc))
