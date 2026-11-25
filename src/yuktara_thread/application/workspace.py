@@ -36,6 +36,10 @@ class WorkspaceService:
     def archive_project(self, project_id: str) -> Project:
         return self.projects.archive(project_id)
 
+    def restore_project(self, project_id: str) -> Project:
+        """Restore an archived project and preserve its existing workspace data."""
+        return self.projects.restore(project_id)
+
     def get_context(self, project_id: str) -> list[ContextSection]:
         return self.context.list_for_project(project_id)
 
