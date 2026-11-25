@@ -20,7 +20,8 @@ Yuktara Thread is a local-first project continuity and handover platform. It pre
 - Project create, read, list, update and archive operations.
 - Structured context sections with revision history and stale-write protection.
 - Versioned ZIP-based `.thread` package creation and verification.
-- CLI commands, automated tests and GitHub Actions CI matrix.
+- CLI commands for package creation/verification and local workspace/project management.
+- Automated tests and GitHub Actions CI matrix.
 
 ## Quick start
 ```bash
@@ -46,6 +47,10 @@ goals = next(section for section in sections if section.section_key == "goals")
 workspace.save_context(project.project_id, "goals", "Deliver accessible responsive UI",
                        expected_revision=goals.revision)
 ```
+
+## Workspace CLI
+
+Initialize a database with `thread workspace init --database ./workspace.sqlite3`, then create/list/archive projects with `thread project`. See [CLI guide](docs/development/CLI.md).
 
 ## Repository map
 - `src/yuktara_thread/domain`: framework-independent domain models.
