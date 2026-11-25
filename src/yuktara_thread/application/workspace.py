@@ -40,6 +40,10 @@ class WorkspaceService:
         """Restore an archived project and preserve its existing workspace data."""
         return self.projects.restore(project_id)
 
+    def restore_record(self, project_id: str, entity_type: str, entity_id: str) -> dict[str, object]:
+        """Restore a previously soft-deleted decision, task, milestone or reference."""
+        return self.intelligence.restore_record(project_id, entity_type, entity_id)
+
     def get_context(self, project_id: str) -> list[ContextSection]:
         return self.context.list_for_project(project_id)
 
