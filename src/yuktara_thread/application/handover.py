@@ -60,15 +60,22 @@ def _update_import_journal(
             raise RuntimeError("Handover import journal entry disappeared")
 
 
-def list_incomplete_workspace_imports(workspace: WorkspaceService) -> list[dict[str, Any]]:
-    """Return imports that need reconciliation or operator attention."""
+def list_workspace_imports(workspace: WorkspaceService) -> list[dict[str, Any]]:
+    """Return the complete import journal, newest entries first."""
     with workspace.database.read() as connection:
         rows = connection.execute(
             """SELECT * FROM handover_imports
-               WHERE status NOT IN ('completed', 'failed')
-               ORDER BY created_at, import_id"""
+               ORDER BY created_at DESC, import_id DESC"""
         ).fetchall()
     return [dict(row) for row in rows]
+
+
+def list_incomplete_workspace_imports(workspace: WorkspaceService) -> list[dict[str, Any]]:
+    """Return imports that need reconciliation or operator attention."""
+    return [
+        entry for entry in list_workspace_imports(workspace)
+        if entry["status"] not in {"completed", "failed"}
+    ]
 
 
 def reconcile_workspace_imports(
