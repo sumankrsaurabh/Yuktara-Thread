@@ -53,4 +53,4 @@
 - [ ] Independent security review and release qualification.
 
 ## Verification
-Core automated tests pass on Python 3.11, 3.12 and 3.13. Linux offscreen desktop smoke tests pass with the supported PySide6 6.9 series. Package transfer tests cover preview, successful extraction, tamper rejection and existing-destination preservation. Latest passing package-security and desktop preview workflow: https://github.com/sumankrsaurabh/Yuktara-Thread/actions/runs/45559344753. This does not replace Windows/macOS runtime testing, interactive manual QA, accessibility validation or release qualification.
+Core automated tests pass on Python 3.11, 3.12 and 3.13. Linux offscreen desktop smoke tests pass with the supported PySide6 6.9 series. Package transfer tests cover preview, successful extraction, tamper rejection and existing-destination preservation. Latest passing code verification (Python 3.11–3.13 and Linux offscreen desktop smoke tests): https://github.com/sumankrsaurabh/Yuktara-Thread/actions/runs/45598260378. This does not replace Windows/macOS runtime testing, interactive manual QA, accessibility validation or release qualification.
