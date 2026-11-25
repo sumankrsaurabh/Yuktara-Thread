@@ -41,4 +41,5 @@ jobs:
           path: |
             yuktara-thread-*.zip
             yuktara-thread-*.tar.gz
+            yuktara-thread-*.sha256
           if-no-files-found: error
