@@ -74,6 +74,8 @@ class EntityEditorDialog(QDialog):
                 widget.setCurrentText(str(initial.get(key) or choices[0]))
             else:
                 widget = QLineEdit(str(initial.get(key) or ""))
+            widget.setAccessibleName(label)
+            widget.setAccessibleDescription(f"{kind.title()} {label.toLowerCase()} field".replace("toLowerCase", "lower"))
             self.fields[key] = widget
             form.addRow(label, widget)
 
@@ -117,6 +119,7 @@ class DeletedRecordsDialog(QDialog):
         self.setMinimumSize(520, 380)
         layout = QVBoxLayout(self)
         self.records = QListWidget()
+        self.records.setAccessibleName(f"Deleted {kind} records")
         layout.addWidget(self.records, 1)
         self.status = QLabel("Deleted records can be restored without losing their identity.")
         self.status.setObjectName("muted")
