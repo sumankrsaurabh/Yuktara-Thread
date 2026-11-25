@@ -156,7 +156,7 @@ thread project import --database ./recipient.sqlite3 \
   --files-destination ./received-project-files
 ```
 
-Database records are restored in one SQLite transaction. If restoration fails after extraction, the newly created files directory is removed. The recipient gets new local project/entity IDs; the source workspace database is never copied. Current import restores the latest context section contents and current project records. It records the count of source activity events in the import event, but does not replay the original event history or context revision bodies.
+Database records are restored in one SQLite transaction. If restoration fails after extraction, the newly created files directory is removed. The recipient gets new local project/entity IDs; the source workspace database is never copied. Current import restores the latest context section contents and current project records. It restores the included context revision bodies and replays up to 1,000 validated source activity events. Replayed events retain their original timestamps and are marked as imported in payload metadata; they are not cryptographically authenticated and must not be treated as proof of who performed the original actions.
 
 ## Desktop application
 
