@@ -27,7 +27,7 @@ Perform on a clean user account or clean virtual machine for each platform:
 - [ ] Confirm context revision bodies and imported source activity events remain visible and are marked as imported.
 - [ ] Test backup and restore to a new path; confirm existing files are never overwritten.
 - [ ] Test Unicode project names, paths with spaces, long filenames, large files and low disk space.
-- [ ] Test display scaling, window resizing, keyboard-only navigation and screen-reader labels.
+- [ ] Test display scaling and window resizing.\n- [ ] Complete keyboard-only navigation using visible focus indicators on each platform.\n- [ ] Test screen-reader labels, reading order and dialog announcements with platform-native assistive technology.\n- [ ] Verify color contrast and non-color status indicators.
 - [ ] Confirm core workflows operate offline.
 
 ## Security and data integrity
