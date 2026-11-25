@@ -1,6 +1,6 @@
 # Implementation Status
 
-**Release:** 0.5.3.dev0  
+**Release:** 0.6.0.dev0  
 **Status:** pre-alpha; not production-ready
 
 ## Implemented
@@ -19,11 +19,11 @@
 - [x] Append-only project event records for project, context, intelligence entity and dependency mutations.
 - [x] Task prerequisite relationships with cross-project, self-link and cycle rejection, plus audited edge removal.
 - [x] Bounded project activity timeline query.
-- [x] Initial PySide6 desktop shell with project navigation, first-run workspace selection, context editor, intelligence tabs and activity timeline.
+- [x] Modular PySide6 desktop application with first-run workspace selection, project navigation, context editors, intelligence panels, dialogs and activity timeline.
 - [x] Project metadata editing and audited project archiving from the desktop UI.
 - [x] Archived-project inspection and audited restoration from the desktop UI and CLI.
 - [x] Task prerequisite add/remove controls using cycle-safe application services.
-- [x] Human-readable activity labels with text search, event-type and inclusive date-range filtering.
+- [x] Human-readable activity labels with text search, event-type and inclusive date-range filtering, plus explicit refresh.
 - [x] Activity export to JSON and Markdown for the currently filtered event set.
 - [x] Structured desktop forms for decision, task, milestone and reference fields.
 - [x] Offscreen Qt smoke tests covering window startup, structured forms, task prerequisites, project archiving and activity filtering.
@@ -43,8 +43,8 @@
 - [x] CLI `project export` and `project import` for workspace-aware handover round trips.
 - [x] Package tests for successful extraction, tamper rejection, existing destinations and unsafe paths.
 - [x] Linux offscreen PySide6 runtime smoke tests pass without shutdown errors.
-- [x] CI matrix added for Windows, macOS and Linux platform smoke tests, plus wheel/sdist build validation (first full matrix run pending).
-- [x] Automated core tests and GitHub Actions Python 3.11–3.13 matrix.
+- [x] Windows, macOS and Linux platform smoke-test matrix, portable PyInstaller bundle builds and wheel/sdist validation.
+- [x] Automated core tests and GitHub Actions Python 3.11–3.13 matrix.\n- [x] Portable unsigned desktop bundles built successfully on Windows, macOS and Linux in CI.
 
 ## Not yet implemented
 - [x] Explicit, dry-run-first soft-delete retention purge with a permanent audit event; activity events are retained indefinitely by default and can be exported.
@@ -64,4 +64,4 @@
 - [ ] Independent security review and release qualification.
 
 ## Verification
-Core automated tests pass on Python 3.11, 3.12 and 3.13. Linux offscreen desktop smoke tests pass with the supported PySide6 6.9 series. A Windows/macOS/Linux platform smoke matrix and wheel/sdist validation have been added and require a successful CI run. Package transfer tests cover preview, successful extraction, tamper rejection and existing-destination preservation. Latest verification is tracked in GitHub Actions for each pushed commit. The 0.5.3 desktop recovery, activity export and dependency-graph changes require the current CI run to complete before they are considered verified. This does not replace Windows/macOS runtime testing, interactive manual QA, accessibility validation or release qualification.
+Core tests pass on Python 3.11, 3.12 and 3.13. Offscreen desktop smoke tests and PyInstaller bundle builds passed on Windows, macOS and Linux in run 45603548295. Wheel and source distributions also build and pass Twine metadata checks. The modular UI refactor and activity refresh change are undergoing a newer CI run. Automated CI does not replace interactive manual QA, accessibility validation, signing/notarization or release qualification.
