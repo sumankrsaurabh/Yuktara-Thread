@@ -26,6 +26,9 @@
 - [x] Markdown handover report generated from verified package metadata, file inventory and structured project context.
 - [x] Workspace-aware package export for context sections, decisions, tasks, milestones, references, task dependencies and recent activity.
 - [x] CLI command for workspace-aware project export with an explicit selected-files directory.
+- [x] Recipient-side workspace import with new local IDs, context/record restoration and task dependency remapping.
+- [x] Atomic SQLite restoration transaction; failed database restoration removes newly extracted files.
+- [x] Desktop package preview can import a handover into the current workspace.
 - [x] CLI `preview` and `import` commands for verified packages.
 - [x] Package tests for successful extraction, tamper rejection, existing destinations and unsafe paths.
 - [x] Dedicated Linux desktop CI job; PySide6 6.9 runtime smoke tests pass without shutdown errors.
@@ -37,8 +40,8 @@
 - [ ] Archived-project restore UI.
 - [ ] Task dependency graph visualization.
 - [ ] Activity date-range filters and export.
-- [ ] Recipient-side workspace import with transactional database restoration and conflict handling.
 - [ ] Historical context revision-body export and configurable activity-history limits.
+- [ ] Import conflict resolution, merge/replace workflows and full source activity-history replay.
 - [ ] Readiness scoring and completeness checks.
 - [ ] Search, backup and recovery workflows.
 - [ ] Encryption, signatures and key management.
