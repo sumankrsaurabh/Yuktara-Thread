@@ -30,12 +30,23 @@ class ContextRepository:
                        VALUES (?, ?, ?, ?, '', 1, ?)""",
                     (str(uuid4()), project_id, key, title, now),
                 )
+                section = connection.execute(
+                    "SELECT section_id, title, content, revision FROM context_sections "
+                    "WHERE project_id = ? AND section_key = ?", (project_id, key)
+                ).fetchone()
+                connection.execute(
+                    """INSERT OR IGNORE INTO context_revisions
+                       (revision_id, section_id, revision, title, content, created_at)
+                       VALUES (?, ?, ?, ?, ?, ?)""",
+                    (str(uuid4()), section["section_id"], section["revision"],
+                     section["title"], section["content"], now),
+                )
 
     def list_for_project(self, project_id: str) -> list[ContextSection]:
         with self.database.read() as connection:
             rows = connection.execute(
-                """SELECT * FROM context_sections
-                   WHERE project_id = ? ORDER BY section_key""", (project_id,)
+                "SELECT * FROM context_sections WHERE project_id = ? ORDER BY section_key",
+                (project_id,),
             ).fetchall()
         return [ContextSection(**dict(row)) for row in rows]
 
@@ -50,8 +61,7 @@ class ContextRepository:
         now = _now()
         with self.database.transaction() as connection:
             row = connection.execute(
-                """SELECT * FROM context_sections
-                   WHERE project_id = ? AND section_key = ?""",
+                "SELECT * FROM context_sections WHERE project_id = ? AND section_key = ?",
                 (project_id, section_key),
             ).fetchone()
             if row is None:
@@ -62,11 +72,13 @@ class ContextRepository:
                     f"current revision {row['revision']})"
                 )
             new_revision = expected_revision + 1
-            connection.execute(
+            cursor = connection.execute(
                 """UPDATE context_sections SET content = ?, revision = ?, updated_at = ?
                    WHERE section_id = ? AND revision = ?""",
                 (content, new_revision, now, row["section_id"], expected_revision),
             )
+            if cursor.rowcount != 1:
+                raise RuntimeError("Context was modified by another operation; reload and retry")
             connection.execute(
                 """INSERT INTO context_revisions
                    (revision_id, section_id, revision, title, content, created_at)
