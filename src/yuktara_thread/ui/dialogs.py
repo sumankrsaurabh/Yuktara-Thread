@@ -5,6 +5,7 @@ from pathlib import Path
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
+    QApplication, QCheckBox,
     QDialog, QHBoxLayout, QInputDialog, QFileDialog, QLabel, QLineEdit,
     QListWidget, QListWidgetItem, QMessageBox, QPushButton, QPlainTextEdit,
     QVBoxLayout, QWidget,
@@ -12,7 +13,7 @@ from PySide6.QtWidgets import (
 
 from yuktara_thread.application.handover import (
     export_workspace_project, import_workspace_project, inspect_workspace_import,
-    list_incomplete_workspace_imports, reconcile_workspace_imports,
+    list_incomplete_workspace_imports, list_workspace_imports, reconcile_workspace_imports,
 )
 from yuktara_thread.application.handover_report import render_handover_report
 from yuktara_thread.application.search import search_workspace
@@ -328,6 +329,7 @@ class ImportRecoveryDialog(QDialog):
         super().__init__(parent)
         self.workspace = workspace
         self.entries: list[dict] = []
+        self.all_entries: list[dict] = []
         self.setWindowTitle("Handover import recovery")
         self.setAccessibleName("Handover import recovery")
         self.setMinimumSize(720, 500)
@@ -341,8 +343,20 @@ class ImportRecoveryDialog(QDialog):
         intro.setObjectName("muted")
         layout.addWidget(intro)
 
+        filters = QHBoxLayout()
+        self.search = QLineEdit()
+        self.search.setPlaceholderText("Filter by ID, status, phase or destination…")
+        self.search.setAccessibleName("Filter import journal")
+        self.search.textChanged.connect(self.refresh)
+        self.show_history = QCheckBox("Show completed and failed history")
+        self.show_history.setAccessibleName("Show completed and failed imports")
+        self.show_history.toggled.connect(self.refresh)
+        filters.addWidget(self.search, 1)
+        filters.addWidget(self.show_history)
+        layout.addLayout(filters)
+
         self.records = QListWidget()
-        self.records.setAccessibleName("Incomplete handover imports")
+        self.records.setAccessibleName("Handover import journal entries")
         self.records.setAccessibleDescription(
             "Select an import to inspect its status, destination and recovery guidance."
         )
@@ -364,13 +378,18 @@ class ImportRecoveryDialog(QDialog):
         actions.addStretch(1)
         self.refresh_button = QPushButton("Refresh list")
         self.refresh_button.setAccessibleName("Refresh incomplete imports")
+        self.copy_path_button = QPushButton("Copy destination path")
+        self.copy_path_button.setAccessibleName("Copy selected import destination path")
+        self.copy_path_button.setEnabled(False)
         self.reconcile_button = QPushButton("Reconcile stale imports…")
         self.reconcile_button.setAccessibleName("Reconcile stale imports")
         self.reconcile_button.setObjectName("primary")
         close = QPushButton("Close")
         self.refresh_button.clicked.connect(self.refresh)
+        self.copy_path_button.clicked.connect(self.copy_destination_path)
         self.reconcile_button.clicked.connect(self.reconcile)
         close.clicked.connect(self.reject)
+        actions.addWidget(self.copy_path_button)
         actions.addWidget(self.refresh_button)
         actions.addWidget(self.reconcile_button)
         actions.addWidget(close)
@@ -395,14 +414,31 @@ class ImportRecoveryDialog(QDialog):
                 "This may be an interrupted import. Reconciliation checks the project and "
                 "destination after the five-minute safety window; it does not remove either."
             )
+        if status == "completed":
+            return "Import is complete. Keep the package and destination as part of your normal backup policy."
+        if status == "failed":
+            return "Import failed. Review the recorded phase and error; start a new import only after checking for leftover files."
         return "Inspect the project and destination before taking any manual action."
 
-    def refresh(self) -> None:
+    def refresh(self, *_args) -> None:
         selected_id = None
         current = self.records.currentItem()
         if current is not None:
             selected_id = current.data(Qt.ItemDataRole.UserRole)
-        self.entries = list_incomplete_workspace_imports(self.workspace)
+        self.all_entries = list_workspace_imports(self.workspace)
+        query = self.search.text().strip().casefold()
+        visible = self.all_entries
+        if not self.show_history.isChecked():
+            visible = [
+                entry for entry in visible
+                if entry["status"] not in {"completed", "failed"}
+            ]
+        if query:
+            visible = [
+                entry for entry in visible
+                if query in " ".join(str(value) for value in entry.values()).casefold()
+            ]
+        self.entries = visible
         self.records.clear()
         selected_row = -1
         for index, entry in enumerate(self.entries):
@@ -422,11 +458,25 @@ class ImportRecoveryDialog(QDialog):
         else:
             self.details.clear()
             self.status.setText(
-                "No incomplete imports need attention. Completed and failed imports are "
-                "kept in the journal but are not listed here."
+                "No journal entries match the current view. Enable history or clear the filter to see other imports."
             )
-        self.reconcile_button.setEnabled(bool(self.entries))
+        has_incomplete = any(
+            entry["status"] not in {"completed", "failed"} for entry in self.entries
+        )
+        self.reconcile_button.setEnabled(has_incomplete)
         self.show_selected(self.records.currentRow())
+
+    def copy_destination_path(self) -> None:
+        item = self.records.currentItem()
+        if item is None:
+            return
+        entry = next(
+            (value for value in self.entries if value["import_id"] == item.data(Qt.ItemDataRole.UserRole)),
+            None,
+        )
+        destination = entry.get("destination_path") if entry else None
+        if destination:
+            QApplication.clipboard().setText(str(destination))
 
     def show_selected(self, row: int) -> None:
         if row < 0 or row >= len(self.entries):
@@ -435,6 +485,7 @@ class ImportRecoveryDialog(QDialog):
         entry = self.entries[row]
         destination = entry.get("destination_path") or "(not recorded)"
         error = entry.get("error") or "No error recorded."
+        self.copy_path_button.setEnabled(bool(destination and destination != "(not recorded)"))
         self.details.setPlainText(
             f"Import ID: {entry['import_id']}\n"
             f"Project ID: {entry['project_id']}\n"
@@ -449,7 +500,7 @@ class ImportRecoveryDialog(QDialog):
         )
         self.status.setText(
             "Reconciliation ignores entries updated in the previous five minutes to avoid "
-            "racing an active import."
+            "racing an active import. Completed and failed records are read-only history."
         )
 
     def reconcile(self) -> None:
