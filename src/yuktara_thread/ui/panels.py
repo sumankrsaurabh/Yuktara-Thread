@@ -570,6 +570,9 @@ class ActivityPanel(QWidget):
             before=(str(oldest["created_at"]), str(oldest["event_id"])),
         )
         self.events.extend(page)
+        for event_type in sorted({str(event["event_type"]) for event in page}):
+            if self.kind_filter.findData(event_type) < 0:
+                self.kind_filter.addItem(self.LABELS.get(event_type, event_type), event_type)
         self.has_more = len(page) == self.PAGE_SIZE
         self._update_pagination_controls()
         self.apply_filters()
