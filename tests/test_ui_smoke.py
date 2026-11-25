@@ -5,6 +5,7 @@ import pytest
 
 PySide6 = pytest.importorskip("PySide6")
 
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication, QMessageBox, QPlainTextEdit, QTabWidget
 
 from yuktara_thread.ui.main_window import EntityEditorDialog, EntityPanel, MainWindow
@@ -78,7 +79,7 @@ def test_task_dependency_controls_use_audited_service(tmp_path, application):
     # Select the dependent task by its record ID, not by assumed sort order.
     for index in range(panel.list.count()):
         item = panel.list.item(index)
-        if item.data(256)["task_id"] == dependent["task_id"]:
+        if item.data(Qt.ItemDataRole.UserRole)["task_id"] == dependent["task_id"]:
             panel.list.setCurrentItem(item)
             break
 
