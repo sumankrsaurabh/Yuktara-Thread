@@ -324,15 +324,24 @@ class ProjectIntelligenceRepository:
             ).fetchall()
         return [row["depends_on_task_id"] for row in rows]
 
-    def timeline(self, project_id: str, *, limit: int = 100) -> list[dict[str, object]]:
+    def timeline(
+        self, project_id: str, *, limit: int = 100,
+        before: tuple[str, str] | None = None,
+    ) -> list[dict[str, object]]:
+        """Return a stable newest-first page using a composite cursor."""
         if not 1 <= limit <= 1000:
             raise ValueError("Timeline limit must be between 1 and 1000")
+        query = """SELECT event_id, event_type, entity_type, entity_id, payload_json, created_at
+                   FROM project_events WHERE project_id = ?"""
+        parameters: list[object] = [project_id]
+        if before is not None:
+            created_at, event_id = before
+            query += " AND (created_at < ? OR (created_at = ? AND event_id < ?))"
+            parameters.extend((created_at, created_at, event_id))
+        query += " ORDER BY created_at DESC, event_id DESC LIMIT ?"
+        parameters.append(limit)
         with self.database.read() as connection:
-            rows = connection.execute(
-                """SELECT event_id, event_type, entity_type, entity_id, payload_json, created_at
-                   FROM project_events WHERE project_id = ?
-                   ORDER BY created_at DESC, event_id DESC LIMIT ?""", (project_id, limit)
-            ).fetchall()
+            rows = connection.execute(query, parameters).fetchall()
         result = []
         for row in rows:
             item = dict(row)
