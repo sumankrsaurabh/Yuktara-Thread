@@ -161,6 +161,29 @@ class EntityPanel(QWidget):
         add.clicked.connect(self.add_record)
         edit.clicked.connect(self.edit_record)
         delete.clicked.connect(self.delete_record)
+
+        self.dependency_list = None
+        self.prerequisite_picker = None
+        if self.kind == "task":
+            dependency_heading = QLabel("Task prerequisites")
+            dependency_heading.setStyleSheet("font-weight: 600;")
+            layout.addWidget(dependency_heading)
+            dependency_row = QHBoxLayout()
+            self.prerequisite_picker = QComboBox()
+            self.prerequisite_picker.setPlaceholderText("Select a prerequisite task")
+            add_dependency = QPushButton("Add prerequisite")
+            remove_dependency = QPushButton("Remove selected")
+            dependency_row.addWidget(self.prerequisite_picker, 1)
+            dependency_row.addWidget(add_dependency)
+            dependency_row.addWidget(remove_dependency)
+            layout.addLayout(dependency_row)
+            self.dependency_list = QListWidget()
+            self.dependency_list.setMaximumHeight(120)
+            layout.addWidget(self.dependency_list)
+            add_dependency.clicked.connect(self.add_dependency)
+            remove_dependency.clicked.connect(self.remove_dependency)
+            self.list.currentItemChanged.connect(self.refresh_dependencies)
+
         self.refresh()
 
     def refresh(self) -> None:
@@ -169,6 +192,56 @@ class EntityPanel(QWidget):
             item = QListWidgetItem(str(record["title"]))
             item.setData(Qt.ItemDataRole.UserRole, record)
             self.list.addItem(item)
+
+    def refresh_dependencies(self, *_args) -> None:
+        if self.kind != "task" or self.dependency_list is None:
+            return
+        self.dependency_list.clear()
+        self.prerequisite_picker.clear()
+        tasks = self.workspace.intelligence.list_records(self.project_id, "task")
+        current = self.list.currentItem()
+        if current is None:
+            return
+        selected = current.data(Qt.ItemDataRole.UserRole)
+        task_id = str(selected["task_id"])
+        for task in tasks:
+            if str(task["task_id"]) != task_id:
+                self.prerequisite_picker.addItem(str(task["title"]), str(task["task_id"]))
+        by_id = {str(task["task_id"]): str(task["title"]) for task in tasks}
+        for dependency_id in self.workspace.intelligence.list_task_dependencies(task_id):
+            title = by_id.get(dependency_id, "Missing task")
+            item = QListWidgetItem(title)
+            item.setData(Qt.ItemDataRole.UserRole, dependency_id)
+            self.dependency_list.addItem(item)
+
+    def add_dependency(self) -> None:
+        current = self.list.currentItem()
+        if current is None or self.prerequisite_picker.count() == 0:
+            return
+        task = current.data(Qt.ItemDataRole.UserRole)
+        prerequisite_id = self.prerequisite_picker.currentData()
+        try:
+            self.workspace.intelligence.add_task_dependency(
+                self.project_id, str(task["task_id"]), str(prerequisite_id)
+            )
+            self.refresh_dependencies()
+        except (ValueError, LookupError, RuntimeError) as exc:
+            QMessageBox.warning(self, "Could not add prerequisite", str(exc))
+
+    def remove_dependency(self) -> None:
+        current_task = self.list.currentItem()
+        selected_dependency = self.dependency_list.currentItem() if self.dependency_list else None
+        if current_task is None or selected_dependency is None:
+            return
+        task = current_task.data(Qt.ItemDataRole.UserRole)
+        try:
+            self.workspace.intelligence.remove_task_dependency(
+                self.project_id, str(task["task_id"]),
+                str(selected_dependency.data(Qt.ItemDataRole.UserRole)),
+            )
+            self.refresh_dependencies()
+        except (ValueError, LookupError, RuntimeError) as exc:
+            QMessageBox.warning(self, "Could not remove prerequisite", str(exc))
 
     def add_record(self) -> None:
         dialog = EntityEditorDialog(self.kind, parent=self)
