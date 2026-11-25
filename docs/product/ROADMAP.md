@@ -17,7 +17,9 @@
 - [x] Transactional activity events for project, context and intelligence mutations.
 - [x] Task dependency graph with cycle prevention.
 - [ ] Soft-delete/restore and event retention/export policy.
-- [ ] Search and advanced recovery workflows.
+- [x] Bounded local search across project summaries, context and intelligence records.
+- [x] Consistent SQLite backup and validated restore into a new workspace database.
+- [ ] Advanced recovery, restore points and search filters.
 - [x] Consistent SQLite backup and integrity-checked restore into a new workspace database.
 
 ## P3 — Desktop MVP
