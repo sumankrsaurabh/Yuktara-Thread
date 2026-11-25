@@ -79,18 +79,21 @@ def import_workspace_project(
         raise ValueError("Handover project summary must be text")
 
     schema_version = source.get("handover_schema_version")
-    if schema_version not in (None, 1):
+    if schema_version is not None and (
+        not isinstance(schema_version, int) or isinstance(schema_version, bool)
+        or schema_version != 1
+    ):
         raise ValueError("Unsupported handover schema version")
 
     sections_by_key: dict[str, str] = {}
     raw_sections = source.get("context_sections", [])
-    if not isinstance(raw_sections, list):
-        raise ValueError("Context sections must be a list")
+    if not isinstance(raw_sections, list) or len(raw_sections) > len(CONTEXT_TITLES):
+        raise ValueError("Context sections must be a list of at most six items")
     for section in raw_sections:
         if not isinstance(section, dict):
             raise ValueError("Invalid context section")
         key, content = section.get("section_key"), section.get("content", "")
-        if key not in CONTEXT_TITLES or key in sections_by_key:
+        if not isinstance(key, str) or key not in CONTEXT_TITLES or key in sections_by_key:
             raise ValueError(f"Unknown or duplicate context section: {key}")
         if not isinstance(content, str) or len(content) > 200_000:
             raise ValueError(f"Invalid context content for section: {key}")
@@ -142,7 +145,10 @@ def import_workspace_project(
             raise ValueError("Invalid task prerequisite record")
         task_source = dependency.get("task_id")
         prerequisite_source = dependency.get("depends_on_task_id")
-        if task_source not in task_id_map or prerequisite_source not in task_id_map:
+        if (
+            not isinstance(task_source, str) or not isinstance(prerequisite_source, str)
+            or task_source not in task_id_map or prerequisite_source not in task_id_map
+        ):
             raise ValueError("Task prerequisite references a missing task")
         pair = (task_id_map[task_source], task_id_map[prerequisite_source])
         if pair[0] == pair[1] or pair in dependency_pairs:
