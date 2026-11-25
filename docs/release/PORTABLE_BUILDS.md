@@ -14,7 +14,7 @@ The bundle is created with PyInstaller and includes the Python runtime and PySid
 
 ## Launch
 
-The application requires an explicit workspace database path. Start the bundled executable with:
+The application never chooses a hidden workspace automatically. You can either pass an explicit workspace database path or launch without arguments to open the first-run dialog and choose an existing database or create a new one. Example with an explicit path:
 
 Windows: run YuktaraThread.exe with --database C:\\path\\to\\workspace.sqlite3. Linux: run ./YuktaraThread --database /path/to/workspace.sqlite3. macOS: open YuktaraThread.app --args --database /path/to/workspace.sqlite3.
 
