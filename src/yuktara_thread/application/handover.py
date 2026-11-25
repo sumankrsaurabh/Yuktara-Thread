@@ -91,18 +91,18 @@ def reconcile_workspace_imports(workspace: WorkspaceService) -> list[dict[str, A
         if project_present and files_present:
             status = "completed"
             error = None
-            phase = "startup_reconciliation"
+            phase = "manual_reconciliation"
         elif not project_present and not files_present:
             status = "failed"
             error = "Import was interrupted before a project or published files were committed."
-            phase = "startup_reconciliation"
+            phase = "manual_reconciliation"
         else:
             status = "recovery_required"
             error = (
                 "Project and extracted files are inconsistent. No data was deleted; "
                 "inspect the project and destination before retrying."
             )
-            phase = "startup_reconciliation"
+            phase = "manual_reconciliation"
         _update_import_journal(
             workspace, entry["import_id"], status=status,
             phase=phase, error=error,
