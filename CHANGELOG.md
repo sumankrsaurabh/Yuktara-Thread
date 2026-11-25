@@ -2,6 +2,22 @@
 
 All notable changes to Yuktara Thread are documented here. Development versions may change before a stable release.
 
+## 0.6.4.dev0 — 2026-11-25
+
+### Added
+- Structured source-versus-destination project comparison during import inspection, including project summary, context section differences/revisions and decision/task/milestone/reference record counts.
+- Desktop import warning now presents detected project, context and record-count differences before explicit confirmation.
+- Regression coverage for differing local context content and non-destructive comparison.
+
+### Fixed
+- Corrected malformed literal line breaks in the package preview and workspace search dialogs that caused Python compilation to fail across platforms.
+
+### Limitations
+- Comparison is read-only and advisory. It does not merge, replace or automatically reconcile records.
+
+
+All notable changes to Yuktara Thread are documented here. Development versions may change before a stable release.
+
 ## 0.6.3.dev0 — 2026-11-25
 
 ### Added
