@@ -1,9 +1,10 @@
 # Changelog
 
-## 0.5.0.dev0 — Privacy and recovery foundation
+## 0.5.0.dev0 — Privacy, recovery and search foundation
 
 - Add local heuristic secret review before CLI and desktop handover export, with explicit acknowledgement when findings exist.
 - Add SQLite online workspace backup and validated restore into a new database path, available in the CLI and desktop shell.
+- Add bounded workspace-wide search for project summaries, context sections, decisions, tasks, milestones and references, with CLI and desktop entry points.
 - Validate backup integrity, foreign-key consistency, required workspace tables and migration history before publishing restored data.
 
 ## 0.4.0.dev0 — Workspace-aware handover and privacy review
