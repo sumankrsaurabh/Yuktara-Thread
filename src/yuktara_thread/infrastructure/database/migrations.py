@@ -69,7 +69,7 @@ MIGRATIONS: dict[int, tuple[str, ...]] = {
             created_at TEXT NOT NULL, updated_at TEXT NOT NULL
         )""",
         "CREATE INDEX idx_references_project ON project_references(project_id, created_at DESC)",
-    ),,
+    ),
     3: (
         "ALTER TABLE decisions ADD COLUMN deleted_at TEXT",
         "ALTER TABLE tasks ADD COLUMN deleted_at TEXT",
