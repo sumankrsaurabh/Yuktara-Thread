@@ -221,7 +221,6 @@ class TaskDependencyGraphDialog(QDialog):
         layout = QVBoxLayout(self)
         self.scene = QGraphicsScene(self)
         self.view = QGraphicsView(self.scene)
-        self.view.setRenderHint(self.view.renderHints())
         layout.addWidget(self.view, 1)
         self.node_items = {}
         tasks = workspace.intelligence.list_records(project_id, "task")
