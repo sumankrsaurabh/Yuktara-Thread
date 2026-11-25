@@ -617,6 +617,9 @@ def test_import_recovery_dialog_reconciles_without_deleting_files_or_projects(
         QMessageBox, "question",
         lambda *args, **kwargs: QMessageBox.StandardButton.Yes,
     )
+    monkeypatch.setattr(
+        QMessageBox, "information", lambda *args, **kwargs: QMessageBox.StandardButton.Ok,
+    )
     dialog = ImportRecoveryDialog(workspace)
     assert dialog.records.count() == 2
     assert "Package manifest SHA-256" in dialog.details.toPlainText()
