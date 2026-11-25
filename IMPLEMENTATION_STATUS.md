@@ -1,6 +1,6 @@
 # Implementation Status
 
-**Release:** 0.5.2.dev0  
+**Release:** 0.5.3.dev0  
 **Status:** pre-alpha; not production-ready
 
 ## Implemented
@@ -8,12 +8,13 @@
 - [x] Versioned ZIP package writer and SHA-256 integrity verifier.
 - [x] Verified package preview and staged safe file extraction with no-overwrite destination handling.
 - [x] Archive path hardening for traversal, non-canonical paths, Windows-reserved names and non-regular entries.
-- [x] SQLite workspace with ordered transactional migrations (schema v1–v2).
+- [x] SQLite workspace with ordered transactional migrations (schema v1–v3).
 - [x] Project create/get/list/update/archive with transactional activity events.
 - [x] Six structured context sections with append-only revision snapshots and optimistic concurrency.
 - [x] Context revision events in the project timeline.
 - [x] Decision, task, milestone and reference create/list/update operations.
 - [x] Recoverable soft-delete and restore for decisions, tasks, milestones and references, with audited lifecycle events.
+- [x] Desktop deleted-record review and restore dialog; edits to deleted records are rejected until restoration.
 - [x] Append-only project event records for project, context, intelligence entity and dependency mutations.
 - [x] Task prerequisite relationships with cross-project, self-link and cycle rejection, plus audited edge removal.
 - [x] Bounded project activity timeline query.
@@ -21,7 +22,8 @@
 - [x] Project metadata editing and audited project archiving from the desktop UI.
 - [x] Archived-project inspection and audited restoration from the desktop UI and CLI.
 - [x] Task prerequisite add/remove controls using cycle-safe application services.
-- [x] Human-readable activity labels with text search and event-type filtering.
+- [x] Human-readable activity labels with text search, event-type and inclusive date-range filtering.
+- [x] Activity export to JSON and Markdown for the currently filtered event set.
 - [x] Structured desktop forms for decision, task, milestone and reference fields.
 - [x] Offscreen Qt smoke tests covering window startup, structured forms, task prerequisites, project archiving and activity filtering.
 - [x] Desktop package preview dialog with explicit file extraction to a user-selected new folder.
@@ -47,7 +49,7 @@
 - [ ] Desktop design-system refinement, accessibility and keyboard interaction audit.
 
 - [ ] Task dependency graph visualization.
-- [ ] Activity date-range filters and export.
+
 - [ ] Historical context revision-body export and configurable activity-history limits.
 - [ ] Import conflict resolution, merge/replace workflows and full source activity-history replay.
 - [ ] Broader secret coverage, configurable exclusions, and independent validation of secret-scan false positives/negatives.
@@ -58,4 +60,4 @@
 - [ ] Independent security review and release qualification.
 
 ## Verification
-Core automated tests pass on Python 3.11, 3.12 and 3.13. Linux offscreen desktop smoke tests pass with the supported PySide6 6.9 series. Package transfer tests cover preview, successful extraction, tamper rejection and existing-destination preservation. Latest passing code verification (Python 3.11–3.13 and Linux offscreen desktop smoke tests): https://github.com/sumankrsaurabh/Yuktara-Thread/actions/runs/45600244629. This does not replace Windows/macOS runtime testing, interactive manual QA, accessibility validation or release qualification.
+Core automated tests pass on Python 3.11, 3.12 and 3.13. Linux offscreen desktop smoke tests pass with the supported PySide6 6.9 series. Package transfer tests cover preview, successful extraction, tamper rejection and existing-destination preservation. Latest verification is tracked in GitHub Actions for each pushed commit. The 0.5.3 desktop recovery and activity-export changes require the current CI run to complete before they are considered verified. This does not replace Windows/macOS runtime testing, interactive manual QA, accessibility validation or release qualification.
