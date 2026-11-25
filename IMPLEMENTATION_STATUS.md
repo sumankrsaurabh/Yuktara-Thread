@@ -19,7 +19,7 @@
 - [x] Append-only project event records for project, context, intelligence entity and dependency mutations.
 - [x] Task prerequisite relationships with cross-project, self-link and cycle rejection, plus audited edge removal.
 - [x] Bounded project activity timeline query.
-- [x] Initial PySide6 desktop shell with project navigation, context editor, intelligence tabs and activity timeline.
+- [x] Initial PySide6 desktop shell with project navigation, first-run workspace selection, context editor, intelligence tabs and activity timeline.
 - [x] Project metadata editing and audited project archiving from the desktop UI.
 - [x] Archived-project inspection and audited restoration from the desktop UI and CLI.
 - [x] Task prerequisite add/remove controls using cycle-safe application services.
