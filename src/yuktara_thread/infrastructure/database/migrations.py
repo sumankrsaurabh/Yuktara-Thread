@@ -79,6 +79,23 @@ MIGRATIONS: dict[int, tuple[str, ...]] = {
         "CREATE INDEX idx_tasks_deleted ON tasks(project_id, deleted_at)",
         "CREATE INDEX idx_milestones_deleted ON milestones(project_id, deleted_at)",
         "CREATE INDEX idx_references_deleted ON project_references(project_id, deleted_at)",
+    ),
+    4: (
+        """CREATE TABLE handover_imports (
+            import_id TEXT PRIMARY KEY,
+            project_id TEXT NOT NULL,
+            package_manifest_sha256 TEXT NOT NULL,
+            destination_path TEXT NOT NULL,
+            status TEXT NOT NULL CHECK(status IN (
+                'started', 'extracting', 'files_ready', 'database_committed',
+                'completed', 'failed', 'recovery_required'
+            )),
+            phase TEXT NOT NULL,
+            error TEXT,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )""",
+        "CREATE INDEX idx_handover_imports_status_updated ON handover_imports(status, updated_at DESC)",
     )
 }
 
