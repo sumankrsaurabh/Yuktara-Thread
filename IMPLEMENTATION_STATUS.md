@@ -1,6 +1,6 @@
 # Implementation Status
 
-**Release:** 0.6.3.dev0  
+**Release:** 0.6.4.dev0  
 **Status:** pre-alpha; not production-ready
 
 ## Implemented
@@ -30,6 +30,7 @@
 - [x] Offscreen Qt smoke tests covering window startup, structured forms, task prerequisites, project archiving and activity filtering.
 - [x] Desktop package preview dialog with explicit file extraction to a user-selected new folder.
 - [x] Non-destructive handover import inspection: candidate project detection by source ID/name and exact normalized title collisions across decisions, tasks, milestones and references.
+- [x] Structured import comparison for project summary, context section content/revisions and record counts, with a desktop confirmation warning.
 - [x] Desktop warning and explicit confirmation before importing a handover that resembles existing workspace content; import remains import-as-new only.
 - [x] Desktop import of verified handovers into the active workspace.
 - [x] Markdown handover report generated from verified package metadata, file inventory, structured project context and readiness assessment.
@@ -61,4 +62,4 @@
 - [ ] Independent security review and interactive release qualification.
 
 ## Verification
-Core tests pass on Python 3.11, 3.12 and 3.13. Offscreen desktop smoke tests and PyInstaller bundle builds passed on Windows, macOS and Linux in run 45603548295. Wheel and source distributions also build and pass Twine metadata checks. The latest accessibility, cursor-pagination and import-inspection changes are undergoing CI verification. Automated CI does not replace interactive manual QA, accessibility validation, signing/notarization or release qualification.
+Core tests pass on Python 3.11, 3.12 and 3.13. Offscreen desktop smoke tests and PyInstaller bundle builds passed on Windows, macOS and Linux in run 45603548295. Wheel and source distributions also build and pass Twine metadata checks. The latest import-inspection comparison and dialog syntax repair are undergoing full cross-platform CI verification. Automated CI does not replace interactive manual QA, accessibility validation, signing/notarization or release qualification.
