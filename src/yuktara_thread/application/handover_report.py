@@ -34,6 +34,7 @@ def render_handover_report(preview: dict[str, Any]) -> str:
     references = _records(project.get("references", []))
     dependencies = _records(project.get("task_dependencies", []))
     events = _records(project.get("activity_events", []))
+    readiness = project.get("handover_readiness")
     lines = [
         f"# Handover: {name}",
         "",
@@ -61,6 +62,20 @@ def render_handover_report(preview: dict[str, Any]) -> str:
         lines.extend(f"- `{item['path']}` — {int(item['size']):,} bytes" for item in files)
     else:
         lines.append("- No files included.")
+    if isinstance(readiness, dict):
+        lines.extend([
+            "",
+            "## Handover readiness",
+            "",
+            f"- Completeness indicator: {readiness.get('score', 'Not calculated')}%",
+            f"- Status: {_text(readiness.get('status') or 'Not calculated')}",
+            "- This is a completeness indicator, not a guarantee of correctness or safety.",
+        ])
+        missing = _strings(readiness.get("missing_required", [])) + _strings(
+            readiness.get("missing_recommended", [])
+        )
+        if missing:
+            lines.append("- Items to review: " + ", ".join(missing))
     lines.extend([
         "",
         "## Project context",
