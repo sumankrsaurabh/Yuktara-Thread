@@ -4,7 +4,7 @@
 
 Yuktara Thread is a local-first project continuity and handover platform. It preserves decisions, rationale, tasks, milestones, references and selected files so another person can understand and continue a project.
 
-> **Development status:** early pre-alpha. Not production-ready. This repository contains a Python core, SQLite workspace and project intelligence foundation, and prototype portable handover package format. An initial optional PySide6 desktop shell is now available for workspace projects, context, intelligence records and activity history.
+> **Development status:** pre-alpha; not production-ready. The repository now contains a Python core, SQLite workspace, optional PySide6 desktop application and portable `.thread` handover workflows. Cross-platform CI and release qualification are still in progress.
 
 ## Principles
 - Local-first and usable offline.
@@ -19,19 +19,19 @@ Yuktara Thread is a local-first project continuity and handover platform. It pre
 - SQLite workspace with ordered transactional migrations, plus consistent local backup and validated restore into a new database file.
 - Project create, read, list, update and archive operations.
 - Structured context sections with revision history and stale-write protection.
-- Decision, task, milestone and reference create/read/update/delete workflows.
-- Append-only activity events for project, context, intelligence and task dependency changes.
+- Decision, task, milestone and reference create/read/update/soft-delete/restore workflows, plus explicit dry-run-first retention purge.
+- Append-only activity events for project, context, intelligence and task dependency changes; activity can be filtered by date/type/text and exported to JSON or Markdown.
 - Task prerequisite relationships with cycle prevention and audited removal.
 - Versioned ZIP-based `.thread` package creation, integrity verification, non-extracting preview and staged safe file extraction.
-- Workspace-aware handover export/import for structured context, decisions, tasks, milestones, references, task prerequisites, recent activity counts and explicitly selected files. Import creates fresh local IDs and restores database records in one transaction.
+- Workspace-aware handover export/import for structured context and revision bodies, decisions, tasks, milestones, references, task prerequisites, up to 1,000 activity events and explicitly selected files. Import creates fresh local IDs, restores context history, replays source activity as clearly marked imported/unverified events and restores records in one transaction.
 - Desktop package preview can import a verified handover into the open workspace.
 - Markdown handover report export from a verified package preview, including decisions, tasks, dependencies and readiness assessment.
 - Deterministic AI-free readiness checks on the project overview; checks distinguish required context from recommended detail.
 - Local heuristic secret scan before handover export; flagged exports require explicit user acknowledgement, and matched values are never displayed.
 - Safe extraction rejects existing destinations, validates manifest metadata and file hashes, and removes staging data on failure.
 - CLI commands for package creation/verification and local workspace/project management.
-- Optional PySide6 6.9 desktop shell (`.[desktop]`) with project editing/archive, context editing, structured intelligence forms, task prerequisites, searchable activity, verified package preview, workspace import, file extraction and Markdown handover report export.
-- Automated tests and GitHub Actions CI matrix.
+- Optional PySide6 desktop application (`.[desktop]`) with project editing/archive, context editing and revision history, structured intelligence forms, task prerequisites and dependency map, deleted-record recovery, searchable/filterable/exportable activity, verified package preview, workspace import, file extraction and Markdown handover report export.
+- Automated tests and GitHub Actions CI for Python 3.11–3.13, with Windows/macOS/Linux platform smoke coverage being added.
 
 ## Quick start
 ```bash
@@ -75,7 +75,7 @@ Initialize a database with `thread workspace init --database ./workspace.sqlite3
 - `docs`: product, architecture, security and development documentation.
 
 ## Roadmap
-See [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) and [roadmap](docs/product/ROADMAP.md). Next: secret-inclusion review, full source activity-history replay, archive restore and cross-platform packaging.
+See [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) and [roadmap](docs/product/ROADMAP.md). Remaining release work: platform QA, installers, accessibility review, security hardening and release qualification.
 
 ## Security
 Package verification checks integrity, not publisher identity. Packages are not encrypted or signed. This project has not undergone an independent security audit. See [SECURITY.md](SECURITY.md) and [threat model](docs/security/THREAT_MODEL.md).
