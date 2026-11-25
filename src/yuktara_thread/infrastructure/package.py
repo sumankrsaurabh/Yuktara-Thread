@@ -41,8 +41,10 @@ def _safe_archive_name(name: str) -> str:
         if part.endswith((" ", ".")):
             raise PackageError(f"Platform-unsafe archive path: {name!r}")
         stem = part.split(".", 1)[0].upper()
-        if stem in reserved or stem in {f"COM{index}" for index in range(1, 10)} \\
-                or stem in {f"LPT{index}" for index in range(1, 10)}:
+        is_numbered_device = (
+            len(stem) == 4 and stem[:3] in {"COM", "LPT"} and stem[3] in "123456789"
+        )
+        if stem in reserved or is_numbered_device:
             raise PackageError(f"Reserved device name in archive path: {name!r}")
     return path.as_posix()
 
