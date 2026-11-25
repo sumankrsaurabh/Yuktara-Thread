@@ -2,6 +2,14 @@
 
 All notable changes to Yuktara Thread are documented here. Development versions may change before a stable release.
 
+## 0.6.2.dev0 — 2026-11-25
+
+### Added
+- Stable cursor-based pagination for project activity using `(created_at, event_id)` ordering.
+- Desktop activity timeline loads 100 events at a time with an explicit Load older activity action.
+- Timeline pagination regression coverage for complete, non-overlapping pages and desktop incremental loading.
+
+
 ## 0.6.1.dev0 — 2026-11-25
 
 ### Added
