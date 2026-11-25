@@ -132,6 +132,8 @@ def verify_package(package_file: Path) -> dict[str, Any]:
                 raise PackageError("Unrecognized package format")
             if manifest.get("format_version") != FORMAT_VERSION:
                 raise PackageError("Unsupported package format version")
+            if not isinstance(manifest.get("project"), dict):
+                raise PackageError("Package project metadata must be a JSON object")
             declared = manifest.get("files")
             if not isinstance(declared, list):
                 raise PackageError("Manifest files must be a list")
@@ -139,17 +141,25 @@ def verify_package(package_file: Path) -> dict[str, Any]:
             for item in declared:
                 if not isinstance(item, dict):
                     raise PackageError("Invalid file record in manifest")
-                path = _safe_archive_name(item.get("path", ""))
+                raw_path = item.get("path")
+                if not isinstance(raw_path, str):
+                    raise PackageError("Manifest file path must be a string")
+                path = _safe_archive_name(raw_path)
+                if not path.startswith("files/") or path == "files":
+                    raise PackageError(f"Manifest file must be inside files/: {path}")
                 if path == "manifest.json" or path in declared_paths:
                     raise PackageError(f"Duplicate or reserved manifest path: {path}")
                 declared_paths.add(path)
                 if path not in names:
                     raise PackageError(f"Manifest file is missing: {path}")
                 info = archive.getinfo(path)
-                if item.get("size") != info.file_size:
-                    raise PackageError(f"Size mismatch: {path}")
+                declared_size = item.get("size")
+                if (not isinstance(declared_size, int) or isinstance(declared_size, bool)
+                        or declared_size < 0 or declared_size != info.file_size):
+                    raise PackageError(f"Size mismatch or invalid size: {path}")
                 expected = item.get("sha256")
-                if not isinstance(expected, str) or len(expected) != 64:
+                if (not isinstance(expected, str) or len(expected) != 64
+                        or any(char not in "0123456789abcdef" for char in expected)):
                     raise PackageError(f"Invalid SHA-256 value: {path}")
                 digest = hashlib.sha256()
                 with archive.open(path, "r") as stream:
