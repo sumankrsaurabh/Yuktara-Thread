@@ -4,7 +4,7 @@
 
 Yuktara Thread is a local-first project continuity and handover platform. It preserves decisions, rationale, tasks, milestones, references and selected files so another person can understand and continue a project.
 
-> **Development status:** early pre-alpha. Not production-ready. This repository contains an initial Python core, SQLite workspace foundation and prototype portable handover package format. The full desktop application is still under development.
+> **Development status:** early pre-alpha. Not production-ready. This repository contains an Python core, SQLite workspace and project intelligence foundation, and prototype portable handover package format. The full desktop application is still under development.
 
 ## Principles
 - Local-first and usable offline.
@@ -19,6 +19,8 @@ Yuktara Thread is a local-first project continuity and handover platform. It pre
 - SQLite workspace with ordered transactional migrations.
 - Project create, read, list, update and archive operations.
 - Structured context sections with revision history and stale-write protection.
+- Decision, task, milestone and reference records, with a project activity timeline.
+- Task prerequisite relationships with cycle prevention.
 - Versioned ZIP-based `.thread` package creation and verification.
 - CLI commands for package creation/verification and local workspace/project management.
 - Automated tests and GitHub Actions CI matrix.
@@ -62,7 +64,7 @@ Initialize a database with `thread workspace init --database ./workspace.sqlite3
 - `docs`: product, architecture, security and development documentation.
 
 ## Roadmap
-See [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) and [roadmap](docs/product/ROADMAP.md). Next: project event stream, decisions/tasks/milestones/references and package import preview.
+See [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) and [roadmap](docs/product/ROADMAP.md). Next: complete entity lifecycle and event coverage, then package import preview, handover report and desktop UI.
 
 ## Security
 Package verification checks integrity, not publisher identity. Packages are not encrypted or signed. This project has not undergone an independent security audit. See [SECURITY.md](SECURITY.md) and [threat model](docs/security/THREAT_MODEL.md).
