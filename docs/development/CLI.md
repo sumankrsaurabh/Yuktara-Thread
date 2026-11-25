@@ -167,7 +167,7 @@ python -m pip install -e ".[desktop]"
 thread desktop --database ./workspace.sqlite3
 ```
 
-The equivalent dedicated launcher is `thread-desktop --database ./workspace.sqlite3`. The database path is explicit; the application does not silently create a hidden workspace.
+The equivalent dedicated launcher is `thread-desktop --database ./workspace.sqlite3`. You can also run `thread-desktop` without arguments; the desktop application then asks whether to open an existing workspace or create a new database. It never selects a hidden default workspace. When creating a workspace, the chosen destination must be a new file.
 
 The current desktop foundation includes project selection and creation, six structured context editors with revision conflict protection and a history viewer that can restore older content as a new revision, and tabs for decisions, tasks, milestones, references and project activity. Each intelligence tab supports create, edit and delete; the forms expose the structured fields stored by the domain layer. Deletions are soft-deleted in the service layer and recorded in project history. Deleted-record recovery is available through both the CLI and a dedicated desktop dialog.
 
