@@ -12,7 +12,7 @@
 - [x] Context revision events in the project timeline.
 - [x] Decision, task, milestone and reference create/list/update/delete operations.
 - [x] Append-only project event records for project, context, intelligence entity and dependency mutations.
-- [x] Task prerequisite relationships with cross-project, self-link and cycle rejection.
+- [x] Task prerequisite relationships with cross-project, self-link and cycle rejection, plus audited edge removal.
 - [x] Bounded project activity timeline query.
 - [x] Automated tests and GitHub Actions Python 3.11–3.13 matrix.
 
