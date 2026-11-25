@@ -322,6 +322,11 @@ def test_handover_import_inspection_reports_name_and_record_collisions_without_m
         "entity_type": "task",
         "titles": ["Implement storage"],
     }]
+    comparison = inspection["comparisons"][0]
+    assert comparison["project_summary_differs"] is False
+    assert comparison["context_differences"] == []
+    assert comparison["source_counts"]["task"] == 1
+    assert comparison["destination_counts"]["task"] == 1
     assert len(destination_workspace.list_projects(include_archived=True)) == 1
     assert len(destination_workspace.intelligence.list_records(existing.project_id, "task")) == 1
 
