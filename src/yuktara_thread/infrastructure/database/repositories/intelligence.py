@@ -66,6 +66,10 @@ class ProjectIntelligenceRepository:
                 raise ValueError("Invalid reference type")
         return data
 
+    def validate_record_fields(self, kind: str, values: dict[str, object]) -> dict[str, object]:
+        """Validate and normalize import-ready fields for one intelligence record."""
+        return self._validate(kind, values)
+
     def _create(self, kind: str, project_id: str, values: dict[str, object]) -> dict[str, object]:
         table, id_column = self.TABLES[kind]
         defaults = {
