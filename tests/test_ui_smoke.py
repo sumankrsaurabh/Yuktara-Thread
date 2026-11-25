@@ -5,9 +5,9 @@ import pytest
 
 PySide6 = pytest.importorskip("PySide6")
 
-from PySide6.QtWidgets import QApplication, QPlainTextEdit, QTabWidget
+from PySide6.QtWidgets import QApplication, QMessageBox, QPlainTextEdit, QTabWidget
 
-from yuktara_thread.ui.main_window import EntityEditorDialog, MainWindow
+from yuktara_thread.ui.main_window import EntityEditorDialog, EntityPanel, MainWindow
 
 
 @pytest.fixture(scope="module")
@@ -54,3 +54,63 @@ def test_decision_editor_preserves_structured_fields(application):
     assert values["alternatives"] == ["JSON files", "SQLite"]
     assert values["status"] == "proposed"
     dialog.close()
+
+
+def test_task_dependency_controls_use_audited_service(tmp_path, application):
+    window = MainWindow(tmp_path / "dependency-smoke.sqlite3")
+    project = window.workspace.create_project("Dependency project")
+    prerequisite = window.workspace.intelligence.create_task(
+        project.project_id, title="Design schema"
+    )
+    dependent = window.workspace.intelligence.create_task(
+        project.project_id, title="Implement repository"
+    )
+    window.refresh_projects(project.project_id)
+    application.processEvents()
+
+    tabs = window.project_page.findChild(QTabWidget)
+    panel = tabs.widget(3)
+    assert isinstance(panel, EntityPanel)
+    panel.refresh()
+    panel.list.setCurrentRow(0)
+    application.processEvents()
+
+    # Select the dependent task by its record ID, not by assumed sort order.
+    for index in range(panel.list.count()):
+        item = panel.list.item(index)
+        if item.data(256)["task_id"] == dependent["task_id"]:
+            panel.list.setCurrentItem(item)
+            break
+
+    picker_index = panel.prerequisite_picker.findData(prerequisite["task_id"])
+    assert picker_index >= 0
+    panel.prerequisite_picker.setCurrentIndex(picker_index)
+    panel.add_dependency()
+    assert prerequisite["task_id"] in window.workspace.intelligence.list_task_dependencies(
+        dependent["task_id"]
+    )
+    assert panel.dependency_list.count() == 1
+
+    panel.remove_dependency()
+    assert window.workspace.intelligence.list_task_dependencies(dependent["task_id"]) == []
+    window.close()
+    application.processEvents()
+
+
+def test_archive_control_archives_project_and_removes_it_from_active_list(
+    tmp_path, application, monkeypatch
+):
+    window = MainWindow(tmp_path / "archive-smoke.sqlite3")
+    project = window.workspace.create_project("Archive me")
+    window.refresh_projects(project.project_id)
+    monkeypatch.setattr(
+        QMessageBox, "question",
+        lambda *_args, **_kwargs: QMessageBox.StandardButton.Yes,
+    )
+
+    window.archive_project(project)
+
+    assert window.workspace.list_projects() == []
+    assert window.workspace.list_projects(include_archived=True)[0].status == "archived"
+    window.close()
+    application.processEvents()
