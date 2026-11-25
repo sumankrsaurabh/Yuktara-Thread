@@ -11,7 +11,7 @@ from PySide6.QtWidgets import QApplication, QFileDialog, QInputDialog, QLabel, Q
 from yuktara_thread.domain.models import ProjectContext
 from yuktara_thread.infrastructure.package import create_package, preview_package
 from yuktara_thread.ui.main_window import (
-    ActivityPanel, EntityEditorDialog, EntityPanel, MainWindow, PackagePreviewDialog, ReadinessPanel,
+    ActivityPanel, EntityEditorDialog, EntityPanel, MainWindow, PackagePreviewDialog, ReadinessPanel, SearchDialog,
 )
 
 
@@ -320,4 +320,24 @@ def test_workspace_backup_and_restore_actions_in_desktop(tmp_path, application, 
     restored = WorkspaceService(restored_path)
     assert restored.projects.get(project.project_id).name == "UI backup project"
     assert len(info_messages) == 2
+    dispose_widget(window, application)
+
+
+def test_search_dialog_finds_and_opens_matching_project(tmp_path, application):
+    window = MainWindow(tmp_path / "search-dialog.sqlite3")
+    project = window.workspace.create_project(
+        "Search dialog project", "Unique continuity phrase"
+    )
+    opened = []
+    dialog = SearchDialog(window.workspace, on_open=opened.append)
+    dialog.query.setText("continuity phrase")
+    dialog.run_search()
+
+    assert dialog.results.count() == 1
+    assert "Search dialog project" in dialog.results.item(0).text()
+    dialog.results.setCurrentRow(0)
+    dialog.open_selected()
+
+    assert opened == [project.project_id]
+    dispose_widget(dialog, application)
     dispose_widget(window, application)
