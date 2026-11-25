@@ -33,7 +33,7 @@
 - [x] Linux offscreen desktop runtime smoke tests.
 - [x] Verified package preview and staged safe file extraction (CLI and desktop).
 - [x] Archived-project restore UI and audited application/CLI restoration.
-- [ ] Task dependency graph visualization.
+- [x] Read-only layered task dependency graph visualization.
 - [x] Activity date-range filters and JSON/Markdown export.
 - [ ] Desktop design-system refinement and accessibility.
 - [x] Workspace-aware package export/import for context, decisions, tasks, milestones, references and task dependencies.
