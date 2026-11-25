@@ -10,6 +10,7 @@ from PySide6.QtWidgets import (
     QPushButton, QPlainTextEdit, QStackedWidget, QTabWidget, QVBoxLayout, QWidget,
 )
 
+from yuktara_thread.application.backup import backup_workspace, restore_workspace
 from yuktara_thread.application.handover import export_workspace_project, import_workspace_project
 from yuktara_thread.application.handover_report import render_handover_report
 from yuktara_thread.application.readiness import assess_handover_readiness
@@ -682,6 +683,10 @@ class MainWindow(QMainWindow):
         side_layout.addWidget(create)
         create_handover = QPushButton("Create handover package")
         side_layout.addWidget(create_handover)
+        backup_button = QPushButton("Back up workspace…")
+        restore_button = QPushButton("Restore backup as new workspace…")
+        side_layout.addWidget(backup_button)
+        side_layout.addWidget(restore_button)
         package_preview = QPushButton("Preview .thread package")
         side_layout.addWidget(package_preview)
         side_layout.addWidget(QLabel(f"Database: {database_path.name}"))
@@ -708,6 +713,8 @@ class MainWindow(QMainWindow):
 
         create.clicked.connect(self.create_project)
         create_handover.clicked.connect(self.create_handover_package)
+        backup_button.clicked.connect(self.backup_current_workspace)
+        restore_button.clicked.connect(self.restore_workspace_backup)
         package_preview.clicked.connect(self.open_package_preview)
         self.projects.currentItemChanged.connect(self.select_project)
         self.refresh_projects()
@@ -723,6 +730,55 @@ class MainWindow(QMainWindow):
                 self.projects.setCurrentItem(item)
         if not projects:
             self.pages.setCurrentWidget(self.empty)
+
+    def backup_current_workspace(self) -> None:
+        output, _selected_filter = QFileDialog.getSaveFileName(
+            self, "Back up workspace", "yuktara-thread.backup",
+            "SQLite backups (*.backup *.sqlite3);;All files (*)",
+        )
+        if not output:
+            return
+        destination = Path(output)
+        try:
+            backup = backup_workspace(self.workspace.database.path, destination)
+            QMessageBox.information(
+                self, "Workspace backup created",
+                f"Verified backup saved to:\n{backup}",
+            )
+        except (ValueError, OSError, RuntimeError) as exc:
+            QMessageBox.warning(self, "Could not back up workspace", str(exc))
+
+    def restore_workspace_backup(self) -> None:
+        filename, _selected_filter = QFileDialog.getOpenFileName(
+            self, "Select workspace backup", "",
+            "SQLite backups (*.backup *.sqlite3);;All files (*)",
+        )
+        if not filename:
+            return
+        destination, _selected_filter = QFileDialog.getSaveFileName(
+            self, "Restore as a new workspace database", "restored-workspace.sqlite3",
+            "SQLite databases (*.sqlite3);;All files (*)",
+        )
+        if not destination:
+            return
+        answer = QMessageBox.question(
+            self, "Restore backup",
+            "This creates a separate new workspace database. It will not replace or modify "
+            "the workspace currently open in this window. Continue?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if answer != QMessageBox.StandardButton.Yes:
+            return
+        try:
+            restored = restore_workspace(Path(filename), Path(destination))
+            QMessageBox.information(
+                self, "Workspace restored",
+                f"Restored database:\n{restored}\n"
+                "Close this window and open the restored database to continue there.",
+            )
+        except (ValueError, OSError, RuntimeError) as exc:
+            QMessageBox.warning(self, "Could not restore workspace", str(exc))
 
     def create_handover_package(self) -> None:
         current = self.projects.currentItem()
