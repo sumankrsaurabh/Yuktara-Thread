@@ -196,10 +196,8 @@ def import_workspace_project(
         confirmed_preview = preview_package(package_file)
         if confirmed_preview["manifest_sha256"] != preview["manifest_sha256"]:
             raise PackageError("Package changed during workspace import")
-    except Exception as exc:
+    except Exception:
         shutil.rmtree(extracted, ignore_errors=True)
-        if isinstance(exc, sqlite3.Error):
-            raise RuntimeError(f"Workspace database import failed: {exc}") from exc
         raise
     project_id = str(uuid4())
     now = datetime.now(timezone.utc).isoformat()
@@ -276,6 +274,8 @@ def import_workspace_project(
             status="active", created_at=now, updated_at=now, archived_at=None,
         )
         return project, extracted
-    except Exception:
+    except Exception as exc:
         shutil.rmtree(extracted, ignore_errors=True)
+        if isinstance(exc, sqlite3.Error):
+            raise RuntimeError(f"Workspace database import failed: {exc}") from exc
         raise
