@@ -560,7 +560,10 @@ class MainWindow(QMainWindow):
             return
         try:
             self.workspace.archive_project(project.project_id)
-            self.project_page = None
+            if self.project_page is not None:
+                self.pages.removeWidget(self.project_page)
+                self.project_page.deleteLater()
+                self.project_page = None
             self.refresh_projects()
         except (ValueError, LookupError, RuntimeError) as exc:
             QMessageBox.warning(self, "Could not archive project", str(exc))
