@@ -10,6 +10,7 @@ from PySide6.QtWidgets import (
     QPushButton, QPlainTextEdit, QStackedWidget, QTabWidget, QVBoxLayout, QWidget,
 )
 
+from yuktara_thread.application.handover import import_workspace_project
 from yuktara_thread.application.handover_report import render_handover_report
 from yuktara_thread.application.workspace import WorkspaceService
 from yuktara_thread.infrastructure.package import PackageError, import_package, preview_package
@@ -427,10 +428,15 @@ class ProjectPage(QWidget):
 class PackagePreviewDialog(QDialog):
     """Verified package preview with an explicit, staged file-extraction action."""
 
-    def __init__(self, package_path: Path, preview: dict, parent=None) -> None:
+    def __init__(
+        self, package_path: Path, preview: dict, parent=None, *,
+        workspace: WorkspaceService | None = None, on_import=None,
+    ) -> None:
         super().__init__(parent)
         self.package_path = package_path
         self.preview = preview
+        self.workspace = workspace
+        self.on_import = on_import
         self.setWindowTitle("Thread package preview")
         self.setMinimumSize(620, 520)
 
@@ -478,7 +484,55 @@ class PackagePreviewDialog(QDialog):
         actions.addWidget(close)
         actions.addWidget(report)
         actions.addWidget(extract)
+        if self.workspace is not None:
+            import_project = QPushButton("Import project…")
+            import_project.setObjectName("primary")
+            import_project.clicked.connect(self.import_to_workspace)
+            actions.addWidget(import_project)
         layout.addLayout(actions)
+
+    def import_to_workspace(self) -> None:
+        if self.workspace is None:
+            return
+        parent_directory = QFileDialog.getExistingDirectory(
+            self, "Choose destination parent directory for package files"
+        )
+        if not parent_directory:
+            return
+        project_name = str(self.preview["project"].get("name") or "imported-project")
+        safe_default = "".join(
+            character if character.isalnum() or character in " -_." else "-"
+            for character in project_name
+        ).strip(" .") or "imported-project"
+        folder_name, accepted = QInputDialog.getText(
+            self, "Import project files", "Create a new folder named:",
+            text=safe_default,
+        )
+        if not accepted:
+            return
+        folder_name = folder_name.strip()
+        if (
+            not folder_name or Path(folder_name).name != folder_name
+            or folder_name in {".", ".."}
+        ):
+            QMessageBox.warning(
+                self, "Invalid folder name",
+                "Enter a simple folder name without path separators.",
+            )
+            return
+        try:
+            project, extracted = import_workspace_project(
+                self.workspace, self.package_path,
+                Path(parent_directory) / folder_name,
+            )
+            if self.on_import is not None:
+                self.on_import(project.project_id)
+            QMessageBox.information(
+                self, "Project imported",
+                f"'{project.name}' is now in this workspace.\nFiles: {extracted}",
+            )
+        except (PackageError, ValueError, OSError, LookupError, RuntimeError) as exc:
+            QMessageBox.warning(self, "Could not import project", str(exc))
 
     def save_report(self) -> None:
         default_name = str(self.preview["project"].get("name") or "handover")
@@ -611,7 +665,10 @@ class MainWindow(QMainWindow):
         package_path = Path(filename)
         try:
             preview = preview_package(package_path)
-            dialog = PackagePreviewDialog(package_path, preview, self)
+            dialog = PackagePreviewDialog(
+                package_path, preview, self,
+                workspace=self.workspace, on_import=self.refresh_projects,
+            )
             dialog.exec()
         except (PackageError, OSError, ValueError) as exc:
             QMessageBox.warning(self, "Invalid package", str(exc))
