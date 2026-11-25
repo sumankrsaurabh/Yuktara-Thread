@@ -38,7 +38,8 @@ The archive contains no directory entries. All file paths must be canonical rela
 Workspace-aware export stores these fields inside `project`:
 
 - Project identity and display metadata (source IDs are informational only).
-- `context_sections`: the six current context sections, including their current revision numbers.\n- `context_history`: up to 1,000 revision bodies per section, with original revision numbers and timestamps.
+- `context_sections`: the six current context sections, including their current revision numbers.
+- `context_history`: up to 1,000 revision bodies per section, with original revision numbers and timestamps.
 - `decisions`, `tasks`, `milestones`, `references`.
 - `task_dependencies`: source task ID and prerequisite task ID pairs.
 - `activity_events`: up to 1,000 recent event records.
