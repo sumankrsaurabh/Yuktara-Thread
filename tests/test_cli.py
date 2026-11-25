@@ -192,3 +192,29 @@ def test_workspace_search_cli_returns_matching_records(tmp_path: Path, capsys) -
     assert result["result_count"] == 1
     assert result["results"][0]["entity_type"] == "project"
     assert result["results"][0]["project_id"] == project.project_id
+
+
+def test_record_restore_cli(tmp_path: Path, capsys) -> None:
+    from yuktara_thread.application.workspace import WorkspaceService
+
+    database = tmp_path / "record-restore.sqlite3"
+    workspace = WorkspaceService(database)
+    project = workspace.create_project("Record recovery")
+    task = workspace.intelligence.create_task(project.project_id, title="Recover me")
+    workspace.intelligence.delete_record(project.project_id, "task", task["task_id"])
+
+    assert main([
+        "record", "list-deleted", "--database", str(database),
+        "--project-id", project.project_id, "--entity-type", "task",
+    ]) == 0
+    deleted = json.loads(capsys.readouterr().out)
+    assert len(deleted) == 1 and deleted[0]["task_id"] == task["task_id"]
+
+    assert main([
+        "record", "restore", "--database", str(database),
+        "--project-id", project.project_id, "--entity-type", "task",
+        "--entity-id", task["task_id"],
+    ]) == 0
+    restored = json.loads(capsys.readouterr().out)
+    assert restored["restored"] is True
+    assert restored["record"]["deleted_at"] is None
