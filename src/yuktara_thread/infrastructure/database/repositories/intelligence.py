@@ -1,7 +1,7 @@
 """Repositories for decisions, tasks, milestones, references and project events."""
 from __future__ import annotations
 import json
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
 from yuktara_thread.infrastructure.database.connection import Database
@@ -208,6 +208,60 @@ class ProjectIntelligenceRepository:
 
     def _decode_rows(self, entity_type: str, rows) -> list[dict[str, object]]:
         return [self._decode(entity_type, dict(row)) for row in rows]
+
+    def purge_deleted_records(
+        self, project_id: str, entity_type: str, *, older_than_days: int,
+        confirm: bool = False,
+    ) -> dict[str, object]:
+        """Dry-run or permanently purge soft-deleted records older than a cutoff.
+
+        No automatic retention job is scheduled. Permanent deletion requires an
+        explicit caller confirmation and leaves an append-only purge event.
+        """
+        if entity_type not in self.TABLES:
+            raise ValueError("Unknown project entity type")
+        if not isinstance(older_than_days, int) or isinstance(older_than_days, bool) or not 1 <= older_than_days <= 36500:
+            raise ValueError("Retention age must be between 1 and 36,500 days")
+        table, id_column = self.TABLES[entity_type]
+        now = datetime.now(timezone.utc)
+        cutoff = (now - timedelta(days=older_than_days)).isoformat()
+        with self.database.transaction() as connection:
+            project = connection.execute(
+                "SELECT project_id FROM projects WHERE project_id = ?", (project_id,)
+            ).fetchone()
+            if project is None:
+                raise LookupError("Project not found")
+            rows = connection.execute(
+                f"SELECT {id_column} FROM {table} "
+                "WHERE project_id = ? AND deleted_at IS NOT NULL AND deleted_at < ?",
+                (project_id, cutoff),
+            ).fetchall()
+            entity_ids = [str(row[id_column]) for row in rows]
+            if not confirm or not entity_ids:
+                return {
+                    "purged": False, "eligible_count": len(entity_ids),
+                    "cutoff": cutoff, "older_than_days": older_than_days,
+                }
+            placeholders = ", ".join("?" for _ in entity_ids)
+            connection.execute(
+                f"DELETE FROM {table} WHERE project_id = ? AND {id_column} IN ({placeholders})",
+                [project_id, *entity_ids],
+            )
+            append_project_event(
+                connection, project_id=project_id,
+                event_type=f"{entity_type}.purged", entity_type=entity_type,
+                entity_id=None,
+                payload={
+                    "purged_count": len(entity_ids),
+                    "cutoff": cutoff,
+                    "older_than_days": older_than_days,
+                },
+                created_at=now.isoformat(),
+            )
+        return {
+            "purged": True, "purged_count": len(entity_ids),
+            "cutoff": cutoff, "older_than_days": older_than_days,
+        }
 
     def add_task_dependency(self, project_id: str, task_id: str, depends_on_task_id: str) -> None:
         now = _now()
