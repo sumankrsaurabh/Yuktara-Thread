@@ -264,8 +264,8 @@ class TaskDependencyGraphDialog(QDialog):
 
         for task_id, task in by_id.items():
             x, y = positions[task_id]
-            card = self.scene.addRoundedRect(
-                x, y, 196, 76, 9, 9,
+            card = self.scene.addRect(
+                x, y, 196, 76,
                 QPen(QColor("#C8CDD5"), 1),
                 QBrush(QColor("#FFFFFF")),
             )
