@@ -33,6 +33,10 @@ Events are inserted in the same database transaction as the operation they descr
 
 Entity deletion currently physically removes the entity row while preserving a minimal deletion event. A future retention/export policy and soft-delete/restore semantics remain open design work.
 
+## Search
+
+Workspace search is a parameterized, read-only application query across active project summaries, current context sections, decisions, tasks, milestones and references. Archived projects are excluded unless explicitly requested. Search terms are literal substrings (SQL wildcard characters are not interpreted), limited to 2–200 characters, and results are capped at 100. The initial implementation uses SQLite string matching rather than an FTS index; very large workspaces may need indexed full-text search in a later migration.
+
 ## Concurrency
 
 Context saves use optimistic concurrency: callers provide the revision they originally loaded. A stale revision is rejected instead of overwriting a newer edit.
