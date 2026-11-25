@@ -32,8 +32,10 @@
 - [ ] Task dependency graph visualization.
 - [ ] Activity date-range filters and export.
 - [ ] Desktop design-system refinement and accessibility.
-- [ ] Workspace-aware package serialization and import for context, decisions, tasks, milestones, references and activity.
-- [ ] Human-readable handover report.
+- [x] Workspace-aware package export/import for context, decisions, tasks, milestones, references and task dependencies.
+- [x] Markdown handover report and recipient-side import workflow.
+- [ ] Full source activity-history replay and historical context revision-body export.
+- [x] Human-readable handover report with decisions, tasks, milestones, references and context.
 - [ ] Secret inclusion warnings and readiness checks.
 - [ ] Windows/Linux/macOS packaging and platform QA.
 
