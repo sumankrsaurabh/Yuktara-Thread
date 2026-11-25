@@ -280,3 +280,70 @@ def test_only_archived_projects_can_be_restored(tmp_path: Path) -> None:
     project = workspace.create_project("Already active")
     with pytest.raises(LookupError, match="Archived project not found"):
         workspace.restore_project(project.project_id)
+
+
+def test_handover_import_inspection_reports_name_and_record_collisions_without_mutation(tmp_path: Path) -> None:
+    from yuktara_thread.application.handover import (
+        export_workspace_project, inspect_workspace_import,
+    )
+
+    source_workspace = WorkspaceService(tmp_path / "source.sqlite3")
+    source_project = source_workspace.create_project("Shared project")
+    source_workspace.intelligence.create_task(
+        source_project.project_id, title="Implement storage"
+    )
+    selected_files = tmp_path / "selected"
+    selected_files.mkdir()
+    package = export_workspace_project(
+        source_workspace, source_project.project_id, selected_files,
+        tmp_path / "shared.thread",
+    )
+
+    destination_workspace = WorkspaceService(tmp_path / "destination.sqlite3")
+    existing = destination_workspace.create_project("shared PROJECT")
+    destination_workspace.intelligence.create_task(
+        existing.project_id, title="Implement storage"
+    )
+
+    inspection = inspect_workspace_import(destination_workspace, package)
+
+    assert inspection["valid"] is True
+    assert inspection["has_conflicts"] is True
+    assert inspection["recommended_action"] == "review_before_import"
+    assert inspection["candidate_projects"] == [{
+        "project_id": existing.project_id,
+        "name": "shared PROJECT",
+        "status": "active",
+        "match_reason": "project_name",
+    }]
+    assert inspection["record_collisions"] == [{
+        "project_id": existing.project_id,
+        "project_name": "shared PROJECT",
+        "entity_type": "task",
+        "titles": ["Implement storage"],
+    }]
+    assert len(destination_workspace.list_projects(include_archived=True)) == 1
+    assert len(destination_workspace.intelligence.list_records(existing.project_id, "task")) == 1
+
+
+def test_handover_import_inspection_recommends_new_project_when_no_match(tmp_path: Path) -> None:
+    from yuktara_thread.application.handover import (
+        export_workspace_project, inspect_workspace_import,
+    )
+
+    source_workspace = WorkspaceService(tmp_path / "source.sqlite3")
+    source_project = source_workspace.create_project("Incoming project")
+    selected_files = tmp_path / "selected"
+    selected_files.mkdir()
+    package = export_workspace_project(
+        source_workspace, source_project.project_id, selected_files,
+        tmp_path / "incoming.thread",
+    )
+
+    destination_workspace = WorkspaceService(tmp_path / "destination.sqlite3")
+    inspection = inspect_workspace_import(destination_workspace, package)
+
+    assert inspection["has_conflicts"] is False
+    assert inspection["candidate_projects"] == []
+    assert inspection["record_collisions"] == []
+    assert inspection["recommended_action"] == "import_as_new"
