@@ -14,7 +14,7 @@ def workspace(tmp_path: Path):
 
 def test_schema_two_entities_and_events(workspace):
     service, project = workspace
-    assert service.schema_version == 3
+    assert service.schema_version == 4
     decision = service.intelligence.create_decision(
         project.project_id, title="Use SQLite", rationale="Offline-first"
     )
