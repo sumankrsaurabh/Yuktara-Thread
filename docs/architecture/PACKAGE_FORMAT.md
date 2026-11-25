@@ -44,7 +44,6 @@ Workspace-aware export stores these fields inside `project`:
 - `activity_events`: up to 1,000 recent event records.
 - `handover_readiness`: deterministic completeness assessment calculated at export time. It is informational and does not certify correctness or safety.
 - `handover_schema_version`: 1.
-- `handover_readiness`: optional deterministic completeness result captured at export time; it is a documentation aid, not a safety or correctness certification.
 
 The SQLite database itself is never packaged. Context revision bodies are included and restored. Workspace import replays validated source activity entries with imported-origin metadata while preserving source timestamps; these entries are unverified and do not prove who performed the original actions. Older packages without context_history remain importable.
 
@@ -71,7 +70,8 @@ SHA-256 detects accidental or malicious content changes relative to the manifest
 4. Recheck the manifest and each file while streaming extraction.
 5. Publish the extracted directory only if the destination does not exist.
 6. Restore project metadata, current context, structured records and task dependencies in one SQLite transaction.
-7. Assign new local project and entity IDs; remap task prerequisite edges.\n8. Restore context revision snapshots and replay up to 1,000 validated source activity events as imported/unverified history.
+7. Assign new local project and entity IDs; remap task prerequisite edges.
+8. Restore context revision snapshots and replay up to 1,000 validated source activity events as imported/unverified history.
 9. If database restoration fails, remove the newly extracted directory.
 
 Import does not execute files. The recipient should still independently inspect files before opening or running them. Import does not merge into an existing project; it creates a new project.
