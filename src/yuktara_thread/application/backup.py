@@ -1,6 +1,7 @@
 """Consistent SQLite workspace backup and safe restore workflows."""
 from __future__ import annotations
 
+from contextlib import closing
 from pathlib import Path
 import os
 import sqlite3
@@ -73,8 +74,8 @@ def backup_workspace(database_path: Path, output_path: Path) -> Path:
 
     temporary = _temporary_path(destination)
     try:
-        with sqlite3.connect(source, timeout=10.0) as origin:
-            with sqlite3.connect(temporary) as target:
+        with closing(sqlite3.connect(source, timeout=10.0)) as origin:
+            with closing(sqlite3.connect(temporary)) as target:
                 origin.backup(target)
         _validate_database(temporary)
         _publish_new_file(temporary, destination)
@@ -98,8 +99,8 @@ def restore_workspace(backup_path: Path, database_path: Path) -> Path:
     _validate_database(source)
     temporary = _temporary_path(destination)
     try:
-        with sqlite3.connect(f"file:{source.as_posix()}?mode=ro", uri=True, timeout=10.0) as origin:
-            with sqlite3.connect(temporary) as target:
+        with closing(sqlite3.connect(f"{source.as_uri()}?mode=ro", uri=True, timeout=10.0)) as origin:
+            with closing(sqlite3.connect(temporary)) as target:
                 origin.backup(target)
         _validate_database(temporary)
         _publish_new_file(temporary, destination)
