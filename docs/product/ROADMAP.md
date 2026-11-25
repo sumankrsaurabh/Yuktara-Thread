@@ -16,7 +16,7 @@
 - [x] Create/list/update/delete lifecycle.
 - [x] Transactional activity events for project, context and intelligence mutations.
 - [x] Task dependency graph with cycle prevention.
-- [ ] Soft-delete/restore and event retention/export policy.
+- [ ] Entity soft-delete/restore and event retention/export policy.
 - [x] Bounded local search across project summaries, context and intelligence records.
 - [x] Consistent SQLite backup and validated restore into a new workspace database.
 - [ ] Advanced recovery, restore points and search filters.
@@ -31,7 +31,7 @@
 - [x] Human-readable activity labels, text search and event-type filters.
 - [x] Linux offscreen desktop runtime smoke tests.
 - [x] Verified package preview and staged safe file extraction (CLI and desktop).
-- [ ] Archived-project restore UI.
+- [x] Archived-project restore UI and audited application/CLI restoration.
 - [ ] Task dependency graph visualization.
 - [ ] Activity date-range filters and export.
 - [ ] Desktop design-system refinement and accessibility.
@@ -40,7 +40,7 @@
 - [ ] Full source activity-history replay and historical context revision-body export.
 - [x] Human-readable handover report with decisions, tasks, milestones, references and context.
 - [x] Deterministic handover readiness checks and report indicator.
-- [ ] Secret inclusion warnings and inclusion review.
+- [x] Secret inclusion warnings and inclusion review.
 - [ ] Windows/Linux/macOS packaging and platform QA.
 
 ## P4 — Optional intelligence and collaboration
