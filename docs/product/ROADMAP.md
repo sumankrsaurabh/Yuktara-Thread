@@ -38,7 +38,7 @@
 - [ ] Desktop design-system refinement and accessibility.
 - [x] Workspace-aware package export/import for context, decisions, tasks, milestones, references and task dependencies.
 - [x] Markdown handover report and recipient-side import workflow.
-- [ ] Full source activity-history replay and historical context revision-body export.
+- [x] Historical context revision-body export/import and desktop revision restore.\n- [ ] Full source activity-history replay.
 - [x] Human-readable handover report with decisions, tasks, milestones, references and context.
 - [x] Deterministic handover readiness checks and report indicator.
 - [x] Secret inclusion warnings and inclusion review.
