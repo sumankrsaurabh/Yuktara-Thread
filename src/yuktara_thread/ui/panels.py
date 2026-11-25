@@ -75,7 +75,7 @@ class EntityEditorDialog(QDialog):
             else:
                 widget = QLineEdit(str(initial.get(key) or ""))
             widget.setAccessibleName(label)
-            widget.setAccessibleDescription(f"{kind.title()} {label.toLowerCase()} field".replace("toLowerCase", "lower"))
+            widget.setAccessibleDescription(f"{kind.title()} {label.lower()} field")
             self.fields[key] = widget
             form.addRow(label, widget)
 
