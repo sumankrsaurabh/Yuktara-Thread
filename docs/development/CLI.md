@@ -28,7 +28,7 @@ Safely extract verified files into a new directory (existing destinations are ne
 thread import ./handover.thread --destination ./handover-import
 ```
 
-Import uses a temporary staging directory, checks the manifest and each extracted file's size and SHA-256 digest, then publishes the completed directory. On failure, staging files are removed. The current format contains project metadata and files; it does not yet serialize workspace context sections, decisions, tasks, milestones or references.
+Import uses a temporary staging directory, checks the manifest and each extracted file's size and SHA-256 digest, then publishes the completed directory. On failure, staging files are removed. The basic `thread create` command contains project metadata and files. Workspace-aware `thread project export` additionally serializes context sections, decisions, tasks, milestones, references, task prerequisites and recent activity.
 
 ## Workspace commands
 
@@ -61,6 +61,15 @@ Archive a project by its ID:
 ```bash
 thread project archive --database ./workspace.sqlite3 --project-id PROJECT_UUID
 ```
+
+Export a complete workspace project as a `.thread` handover package. The selected files directory is explicit; only files inside that directory are included:
+
+```bash
+thread project export --database ./workspace.sqlite3 --project-id PROJECT_UUID \
+  --files ./selected-handover-files --output ./project-handover.thread
+```
+
+Workspace-aware export includes project metadata, all six context sections, decisions, tasks, milestones, references, task prerequisite edges and up to 1,000 recent activity events. It also includes the explicitly selected files. The export does not include the SQLite database, historical context revision bodies or archived projects.
 
 ## Desktop application
 
