@@ -10,6 +10,7 @@ from PySide6.QtWidgets import (
     QComboBox, QDialog, QFormLayout, QFrame, QHBoxLayout, QInputDialog,
     QFileDialog, QLabel, QLineEdit, QListWidget, QListWidgetItem, QMainWindow, QMessageBox,
     QPushButton, QPlainTextEdit, QStackedWidget, QTabWidget, QVBoxLayout, QWidget,
+    QGraphicsView, QGraphicsScene, QPen, QBrush, QColor,
 )
 
 from yuktara_thread.application.backup import backup_workspace, restore_workspace
@@ -210,6 +211,90 @@ class DeletedRecordsDialog(QDialog):
             QMessageBox.warning(self, "Could not restore record", str(exc))
 
 
+class TaskDependencyGraphDialog(QDialog):
+    """Read-only layered view of task prerequisites and downstream work."""
+
+    def __init__(self, workspace: WorkspaceService, project_id: str, parent=None) -> None:
+        super().__init__(parent)
+        self.setWindowTitle("Task dependency map")
+        self.setMinimumSize(820, 560)
+        layout = QVBoxLayout(self)
+        self.scene = QGraphicsScene(self)
+        self.view = QGraphicsView(self.scene)
+        self.view.setRenderHint(self.view.renderHints())
+        layout.addWidget(self.view, 1)
+        self.node_items = {}
+        tasks = workspace.intelligence.list_records(project_id, "task")
+        by_id = {str(task["task_id"]): task for task in tasks}
+        prerequisites = {
+            task_id: [
+                dependency for dependency in workspace.intelligence.list_task_dependencies(task_id)
+                if dependency in by_id
+            ]
+            for task_id in by_id
+        }
+        depth_cache = {}
+
+        def depth(task_id: str) -> int:
+            if task_id not in depth_cache:
+                depth_cache[task_id] = (
+                    0 if not prerequisites[task_id]
+                    else 1 + max(depth(item) for item in prerequisites[task_id])
+                )
+            return depth_cache[task_id]
+
+        levels = {}
+        for task_id in by_id:
+            levels.setdefault(depth(task_id), []).append(task_id)
+        positions = {}
+        for level, task_ids in levels.items():
+            for index, task_id in enumerate(task_ids):
+                positions[task_id] = (70 + level * 270, 60 + index * 132)
+
+        # Draw prerequisite arrows behind the task cards.
+        for task_id, required_ids in prerequisites.items():
+            x, y = positions[task_id]
+            for required_id in required_ids:
+                rx, ry = positions[required_id]
+                line = self.scene.addLine(
+                    rx + 196, ry + 38, x, y + 38,
+                    QPen(QColor("#8A94A6"), 2),
+                )
+                line.setZValue(0)
+
+        for task_id, task in by_id.items():
+            x, y = positions[task_id]
+            card = self.scene.addRoundedRect(
+                x, y, 196, 76, 9, 9,
+                QPen(QColor("#C8CDD5"), 1),
+                QBrush(QColor("#FFFFFF")),
+            )
+            card.setZValue(1)
+            label = self.scene.addText(
+                f"{task['title']}\n{str(task.get('status', 'open')).replace('_', ' ').title()}"
+            )
+            label.setDefaultTextColor(QColor("#20242B"))
+            label.setPos(x + 10, y + 10)
+            label.setZValue(2)
+            self.node_items[task_id] = card
+
+        if not tasks:
+            self.scene.addText("No active tasks yet. Add tasks to build a dependency map.")
+        width = max((x for x, _y in positions.values()), default=0) + 300
+        height = max((y for _x, y in positions.values()), default=0) + 180
+        self.scene.setSceneRect(0, 0, max(width, 520), max(height, 260))
+        note = QLabel(
+            "Arrows point from a prerequisite to the task that depends on it. "
+            "This view is read-only; edit relationships in the Tasks tab."
+        )
+        note.setObjectName("muted")
+        note.setWordWrap(True)
+        layout.addWidget(note)
+        close = QPushButton("Close")
+        close.clicked.connect(self.accept)
+        layout.addWidget(close, 0, Qt.AlignmentFlag.AlignRight)
+
+
 class EntityPanel(QWidget):
     """Full-field CRUD editor for decisions, tasks, milestones and references."""
 
@@ -235,6 +320,10 @@ class EntityPanel(QWidget):
         actions.addWidget(add)
         actions.addStretch(1)
         actions.addWidget(recover)
+        if self.kind == "task":
+            graph = QPushButton("Dependency map…")
+            actions.addWidget(graph)
+            graph.clicked.connect(self.open_dependency_graph)
         actions.addWidget(edit)
         actions.addWidget(delete)
         layout.addLayout(actions)
@@ -323,6 +412,12 @@ class EntityPanel(QWidget):
             self.refresh_dependencies()
         except (ValueError, LookupError, RuntimeError) as exc:
             QMessageBox.warning(self, "Could not remove prerequisite", str(exc))
+
+    def open_dependency_graph(self) -> None:
+        dialog = TaskDependencyGraphDialog(
+            self.workspace, self.project_id, parent=self
+        )
+        dialog.exec()
 
     def open_deleted_records(self) -> None:
         dialog = DeletedRecordsDialog(
