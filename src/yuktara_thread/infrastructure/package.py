@@ -315,7 +315,7 @@ def import_package(package_file: Path, destination: Path) -> Path:
             manifest_bytes = archive.read("manifest.json")
             if hashlib.sha256(manifest_bytes).hexdigest() != preview["manifest_sha256"]:
                 raise PackageError("Package manifest changed during import")
-            manifest = json.loads(manifest_bytes.decode("utf-8"))
+            manifest = _load_json_bytes(manifest_bytes)
             for item in manifest["files"]:
                 archive_path = _safe_archive_name(item["path"])
                 if not archive_path.startswith("files/") or archive_path == "files":
