@@ -15,10 +15,13 @@ Do not publish exploitable vulnerabilities as public issues. Contact the reposit
 - Archive entry count, individual file size and total uncompressed size are bounded.
 - File contents are hashed with SHA-256 and checked during verification.
 - Package verification does not execute archive contents.
+- Workspace import validates bounded structured metadata, context revision history and source activity entries before extraction.
+- Source activity history is replayed with imported-origin metadata; the UI distinguishes imported entries and does not treat them as authenticated evidence.
+- Local heuristic secret scanning runs before selected-file export; findings require explicit user acknowledgement and matched values are not displayed.
 
 ## Important limitations
 
 - SHA-256 hashes provide integrity checking, not publisher authentication.
-- Packages are not encrypted or digitally signed.
-- Secret scanning, malware scanning, robust import isolation and a formal threat-model review remain future work.
+- Packages and workspace backups are not encrypted or digitally signed.
+- Secret scanning is heuristic and bounded; it is not malware scanning or DLP. Robust OS-level sandboxing and formal threat-model review remain future work.
 - Never assume a verified package is safe to execute or open in another application.
