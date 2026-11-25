@@ -1,6 +1,6 @@
 # Implementation Status
 
-**Release:** 0.5.1.dev0  
+**Release:** 0.5.2.dev0  
 **Status:** pre-alpha; not production-ready
 
 ## Implemented
@@ -12,7 +12,8 @@
 - [x] Project create/get/list/update/archive with transactional activity events.
 - [x] Six structured context sections with append-only revision snapshots and optimistic concurrency.
 - [x] Context revision events in the project timeline.
-- [x] Decision, task, milestone and reference create/list/update/delete operations.
+- [x] Decision, task, milestone and reference create/list/update operations.
+- [x] Recoverable soft-delete and restore for decisions, tasks, milestones and references, with audited lifecycle events.
 - [x] Append-only project event records for project, context, intelligence entity and dependency mutations.
 - [x] Task prerequisite relationships with cross-project, self-link and cycle rejection, plus audited edge removal.
 - [x] Bounded project activity timeline query.
@@ -42,7 +43,7 @@
 - [x] Automated core tests and GitHub Actions Python 3.11–3.13 matrix.
 
 ## Not yet implemented
-- [ ] Entity-specific soft-delete/restore policy and event retention/export policy.
+- [ ] Entity soft-delete retention/purge policy and event retention/export policy.
 - [ ] Desktop design-system refinement, accessibility and keyboard interaction audit.
 
 - [ ] Task dependency graph visualization.
