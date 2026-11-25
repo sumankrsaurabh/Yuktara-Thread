@@ -30,7 +30,7 @@
 ## Planned mitigations
 
 - Secret scanning and inclusion review.
-- Workspace-aware transactional import with conflict handling (current safe extraction publishes files only; it does not import structured workspace records).
+- Import conflict resolution, merge/replace workflows and full source activity-history replay.
 - Explicit provider/data/retention consent before AI transfer.
 - Optional authenticated encryption and digital signatures using established libraries.
 - Security tests, dependency review and external assessment.
