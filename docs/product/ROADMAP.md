@@ -17,7 +17,7 @@
 - [x] Transactional activity events for project, context and intelligence mutations.
 - [x] Task dependency graph with cycle prevention.
 - [x] Entity soft-delete/restore with audited lifecycle events and desktop recovery UI.
-- [ ] Retention/purge policy and event export.
+- [x] Explicit soft-delete retention purge (dry-run first) and activity event export; event history is retained indefinitely by default.
 - [x] Bounded local search across project summaries, context and intelligence records.
 - [x] Consistent SQLite backup and validated restore into a new workspace database.
 - [ ] Advanced recovery, restore points and search filters.
