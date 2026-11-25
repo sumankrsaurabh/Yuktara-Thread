@@ -237,3 +237,47 @@ def test_project_overview_displays_refreshable_readiness_checks(tmp_path, applic
     assert "Needs Attention" in panel.summary.text()
     assert int(panel.summary.text().split("%", 1)[0]) > initial_score
     dispose_widget(window, application)
+
+
+def test_handover_export_requires_secret_review_confirmation(
+    tmp_path, application, monkeypatch
+):
+    window = MainWindow(tmp_path / "secret-review-ui.sqlite3")
+    project = window.workspace.create_project("Secret review UI")
+    window.refresh_projects(project.project_id)
+    selected = tmp_path / "selected-files"
+    selected.mkdir()
+    token = "ghp_" + "C" * 36
+    (selected / "settings.txt").write_text(
+        f"ACCESS_TOKEN={token}", encoding="utf-8"
+    )
+    package = tmp_path / "reviewed.thread"
+    prompts = []
+    messages = []
+
+    monkeypatch.setattr(
+        QFileDialog, "getExistingDirectory",
+        lambda *_args, **_kwargs: str(selected),
+    )
+    monkeypatch.setattr(
+        QFileDialog, "getSaveFileName",
+        lambda *_args, **_kwargs: (str(package), "Thread packages (*.thread)"),
+    )
+    monkeypatch.setattr(
+        QMessageBox, "question",
+        lambda *args, **_kwargs: (
+            prompts.append(args[2]) or QMessageBox.StandardButton.Yes
+        ),
+    )
+    monkeypatch.setattr(
+        QMessageBox, "information",
+        lambda *args, **_kwargs: messages.append(args[2]) or QMessageBox.StandardButton.Ok,
+    )
+
+    window.create_handover_package()
+
+    assert package.is_file()
+    assert prompts and "ACCESS_TOKEN" in prompts[0]
+    assert token not in prompts[0]
+    assert messages and "potential secret finding(s)" in messages[0]
+    dispose_widget(window, application)
