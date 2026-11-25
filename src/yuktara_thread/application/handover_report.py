@@ -9,6 +9,11 @@ def _text(value: Any) -> str:
     return str(value).replace("\r\n", "\n").replace("\r", "\n").strip()
 
 
+def _list(value: Any) -> list:
+    """Treat malformed optional collections as absent in a preview report."""
+    return value if isinstance(value, list) else []
+
+
 def render_handover_report(preview: dict[str, Any]) -> str:
     """Render a concise Markdown report; does not execute or extract package content."""
     project = preview["project"]
