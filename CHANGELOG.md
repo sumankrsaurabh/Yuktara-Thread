@@ -1,6 +1,18 @@
 # Changelog
 
-## 0.6.5.dev0 — 2026-11-25
+All notable changes to Yuktara Thread are documented here. Development versions may change before a stable release.
+
+## 0.6.6.dev0 — 2026-11-25
+
+### Added
+- Durable SQLite import journal records package manifest hash, destination, project ID, phase, state and timestamps before file extraction.
+- Project creation and the `database_committed` journal transition commit atomically in one SQLite transaction.
+- Non-destructive reconciliation finalizes committed imports and flags orphaned files or missing files for manual recovery.
+- `thread import-recovery --database PATH` reports and reconciles interrupted workspace imports.
+- Regression coverage for completed imports, failed imports, retained orphan files, committed import finalization and CLI reconciliation.
+
+### Limitations
+- Recovery reconciliation is explicit, not automatic at application startup. Ambiguous states are never deleted or overwritten.
 
 ### Added
 - Failed workspace imports now report the failing phase and verify whether extracted files were removed.
@@ -8,9 +20,7 @@
 - Regression coverage for failed database imports whose extracted files cannot be cleaned up.
 
 ### Limitations
-- Recovery diagnostics are emitted to the caller; a durable cross-process import journal and automatic interrupted-import recovery are not yet implemented.
-
-All notable changes to Yuktara Thread are documented here. Development versions may change before a stable release.
+- Reconciliation is explicit through the CLI and never deletes files or project records. Ambiguous or inconsistent states require operator review.
 
 ## 0.6.4.dev0 — 2026-11-25
 
