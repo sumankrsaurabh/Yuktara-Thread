@@ -44,7 +44,7 @@ def test_decision_editor_preserves_structured_fields(application):
     dialog = EntityEditorDialog("decision")
     dialog.fields["title"].setText("Use SQLite")
     dialog.fields["problem"].setPlainText("Where should local data live?")
-    dialog.fields["alternatives"].setPlainText("JSON files\\nSQLite")
+    dialog.fields["alternatives"].setPlainText("JSON files" + chr(10) + "SQLite")
     dialog.fields["rationale"].setPlainText("Transactional updates and queries.")
 
     values = dialog.values()
