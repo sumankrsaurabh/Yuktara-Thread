@@ -39,7 +39,8 @@ class SearchDialog(QDialog):
         row.addWidget(self.query, 1)
         row.addWidget(search_button)
         layout.addLayout(row)
-        self.results = QListWidget()\n        self.results.setAccessibleName("Workspace search results")
+        self.results = QListWidget()
+        self.results.setAccessibleName("Workspace search results")
         self.results.itemDoubleClicked.connect(lambda _item: self.open_selected())
         layout.addWidget(self.results, 1)
         self.status = QLabel("Search is local to this workspace. Enter at least two characters.")
@@ -120,7 +121,8 @@ class PackagePreviewDialog(QDialog):
         overview.setWordWrap(True)
         layout.addWidget(overview)
 
-        self.file_list = QPlainTextEdit()\n        self.file_list.setAccessibleName("Verified package file inventory")
+        self.file_list = QPlainTextEdit()
+        self.file_list.setAccessibleName("Verified package file inventory")
         self.file_list.setReadOnly(True)
         self.file_list.setPlainText(
             "\n".join(
