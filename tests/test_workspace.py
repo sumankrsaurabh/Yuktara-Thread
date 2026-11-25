@@ -301,6 +301,14 @@ def test_handover_import_inspection_reports_name_and_record_collisions_without_m
 
     destination_workspace = WorkspaceService(tmp_path / "destination.sqlite3")
     existing = destination_workspace.create_project("shared PROJECT")
+    goals = next(
+        section for section in destination_workspace.get_context(existing.project_id)
+        if section.section_key == "goals"
+    )
+    destination_workspace.save_context(
+        existing.project_id, "goals", "A different local goal",
+        expected_revision=goals.revision,
+    )
     destination_workspace.intelligence.create_task(
         existing.project_id, title="Implement storage"
     )
@@ -324,7 +332,12 @@ def test_handover_import_inspection_reports_name_and_record_collisions_without_m
     }]
     comparison = inspection["comparisons"][0]
     assert comparison["project_summary_differs"] is False
-    assert comparison["context_differences"] == []
+    assert comparison["context_differences"] == [{
+        "section_key": "goals",
+        "change": "content_differs",
+        "source_revision": 1,
+        "destination_revision": 2,
+    }]
     assert comparison["source_counts"]["task"] == 1
     assert comparison["destination_counts"]["task"] == 1
     assert len(destination_workspace.list_projects(include_archived=True)) == 1
