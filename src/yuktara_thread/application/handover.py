@@ -102,7 +102,49 @@ def inspect_workspace_import(
     candidates = list(candidates_by_id.values())
 
     collisions: list[dict[str, Any]] = []
+    comparisons: list[dict[str, Any]] = []
     for project in candidates:
+        destination_context = {
+            section.section_key: section
+            for section in workspace.get_context(project.project_id)
+        }
+        source_context = source.get("context_sections", [])
+        context_differences: list[dict[str, Any]] = []
+        if isinstance(source_context, list):
+            for incoming_section in source_context:
+                if not isinstance(incoming_section, dict):
+                    continue
+                key = incoming_section.get("section_key")
+                if not isinstance(key, str):
+                    continue
+                local_section = destination_context.get(key)
+                if local_section is None:
+                    context_differences.append({
+                        "section_key": key, "change": "missing_in_destination",
+                    })
+                elif local_section.content != incoming_section.get("content"):
+                    context_differences.append({
+                        "section_key": key, "change": "content_differs",
+                        "source_revision": incoming_section.get("revision"),
+                        "destination_revision": local_section.revision,
+                    })
+        comparisons.append({
+            "project_id": project.project_id,
+            "project_name": project.name,
+            "project_summary_differs": (
+                project.summary != str(source.get("summary") or "").strip()
+            ),
+            "context_differences": context_differences,
+            "source_counts": {
+                kind: len(source.get(f"{kind}s", []))
+                if isinstance(source.get(f"{kind}s", []), list) else 0
+                for kind in ("decision", "task", "milestone", "reference")
+            },
+            "destination_counts": {
+                kind: len(workspace.intelligence.list_records(project.project_id, kind))
+                for kind in ("decision", "task", "milestone", "reference")
+            },
+        })
         for kind in ("decision", "task", "milestone", "reference"):
             existing = workspace.intelligence.list_records(project.project_id, kind)
             existing_titles = {
@@ -149,6 +191,7 @@ def inspect_workspace_import(
             for project in candidates
         ],
         "record_collisions": collisions,
+        "comparisons": comparisons,
         "has_conflicts": bool(candidates or collisions),
         "recommended_action": "review_before_import" if candidates or collisions else "import_as_new",
         "import_behavior": "Import always creates a new project; no existing data is merged or replaced.",
