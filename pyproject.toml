@@ -14,9 +14,11 @@ dependencies = []
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0"]
+desktop = ["PySide6>=6.7,<7"]
 
 [project.scripts]
 thread = "yuktara_thread.cli.main:main"
+thread-desktop = "yuktara_thread.ui.app:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
