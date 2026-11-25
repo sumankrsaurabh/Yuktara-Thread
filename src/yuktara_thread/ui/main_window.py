@@ -6,11 +6,12 @@ from pathlib import Path
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QComboBox, QDialog, QFormLayout, QFrame, QHBoxLayout, QInputDialog,
-    QLabel, QLineEdit, QListWidget, QListWidgetItem, QMainWindow, QMessageBox,
+    QFileDialog, QLabel, QLineEdit, QListWidget, QListWidgetItem, QMainWindow, QMessageBox,
     QPushButton, QPlainTextEdit, QStackedWidget, QTabWidget, QVBoxLayout, QWidget,
 )
 
 from yuktara_thread.application.workspace import WorkspaceService
+from yuktara_thread.infrastructure.package import PackageError, import_package, preview_package
 
 
 class ContextEditor(QWidget):
@@ -422,6 +423,91 @@ class ProjectPage(QWidget):
         tabs.addTab(ActivityPanel(workspace, project.project_id), "Activity")
 
 
+class PackagePreviewDialog(QDialog):
+    """Verified package preview with an explicit, staged file-extraction action."""
+
+    def __init__(self, package_path: Path, preview: dict, parent=None) -> None:
+        super().__init__(parent)
+        self.package_path = package_path
+        self.preview = preview
+        self.setWindowTitle("Thread package preview")
+        self.setMinimumSize(620, 520)
+
+        layout = QVBoxLayout(self)
+        project = preview["project"]
+        name = str(project.get("name") or "Unnamed project")
+        summary = str(project.get("summary") or "No summary provided")
+        total_bytes = sum(int(item["size"]) for item in preview["files"])
+        overview = QLabel(
+            f"<b>{name}</b><br>{summary}<br><br>"
+            f"{preview['file_count']} files · {total_bytes:,} bytes · "
+            f"Format {preview['format_version']}"
+        )
+        overview.setWordWrap(True)
+        layout.addWidget(overview)
+
+        self.file_list = QPlainTextEdit()
+        self.file_list.setReadOnly(True)
+        self.file_list.setPlainText(
+            "\\n".join(
+                f"{item['path']}  ·  {item['size']:,} bytes"
+                for item in preview["files"]
+            ) or "This package contains no files."
+        )
+        layout.addWidget(self.file_list, 1)
+
+        notice = QLabel(
+            "Integrity checks passed. Previewing does not extract files. "
+            "Package verification does not establish who created or signed it."
+        )
+        notice.setWordWrap(True)
+        notice.setObjectName("muted")
+        layout.addWidget(notice)
+
+        actions = QHBoxLayout()
+        actions.addStretch(1)
+        close = QPushButton("Close")
+        extract = QPushButton("Extract files…")
+        extract.setObjectName("primary")
+        close.clicked.connect(self.reject)
+        extract.clicked.connect(self.extract_files)
+        actions.addWidget(close)
+        actions.addWidget(extract)
+        layout.addLayout(actions)
+
+    def extract_files(self) -> None:
+        parent_directory = QFileDialog.getExistingDirectory(
+            self, "Choose destination parent directory"
+        )
+        if not parent_directory:
+            return
+        project_name = str(self.preview["project"].get("name") or "imported-project")
+        safe_default = "".join(
+            character if character.isalnum() or character in " -_." else "-"
+            for character in project_name
+        ).strip(" .") or "imported-project"
+        folder_name, accepted = QInputDialog.getText(
+            self, "Import folder name", "Create a new folder named:",
+            text=safe_default,
+        )
+        if not accepted:
+            return
+        folder_name = folder_name.strip()
+        if not folder_name or Path(folder_name).name != folder_name or folder_name in {".", ".."}:
+            QMessageBox.warning(self, "Invalid folder name", "Enter a simple folder name without path separators.")
+            return
+        try:
+            destination = import_package(
+                self.package_path, Path(parent_directory) / folder_name
+            )
+            QMessageBox.information(
+                self, "Files extracted",
+                f"Verified package files were extracted to:\\n{destination}",
+            )
+        except (PackageError, OSError, ValueError) as exc:
+            QMessageBox.warning(self, "Could not extract package", str(exc))
+
+
 class MainWindow(QMainWindow):
     def __init__(self, database_path: Path) -> None:
         super().__init__()
@@ -450,6 +536,8 @@ class MainWindow(QMainWindow):
         create = QPushButton("＋  New project")
         create.setObjectName("primary")
         side_layout.addWidget(create)
+        package_preview = QPushButton("Preview .thread package")
+        side_layout.addWidget(package_preview)
         side_layout.addWidget(QLabel(f"Database: {database_path.name}"))
 
         self.pages = QStackedWidget()
@@ -473,6 +561,7 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(root)
 
         create.clicked.connect(self.create_project)
+        package_preview.clicked.connect(self.open_package_preview)
         self.projects.currentItemChanged.connect(self.select_project)
         self.refresh_projects()
 
@@ -487,6 +576,20 @@ class MainWindow(QMainWindow):
                 self.projects.setCurrentItem(item)
         if not projects:
             self.pages.setCurrentWidget(self.empty)
+
+    def open_package_preview(self) -> None:
+        filename, _selected_filter = QFileDialog.getOpenFileName(
+            self, "Open Thread package", "", "Thread packages (*.thread);;All files (*)"
+        )
+        if not filename:
+            return
+        package_path = Path(filename)
+        try:
+            preview = preview_package(package_path)
+            dialog = PackagePreviewDialog(package_path, preview, self)
+            dialog.exec()
+        except (PackageError, OSError, ValueError) as exc:
+            QMessageBox.warning(self, "Invalid package", str(exc))
 
     def create_project(self) -> None:
         name, accepted = QInputDialog.getText(self, "New project", "Project name")
