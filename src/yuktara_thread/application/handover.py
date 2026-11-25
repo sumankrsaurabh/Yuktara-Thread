@@ -49,6 +49,10 @@ def export_workspace_project(
     payload: dict[str, Any] = {
         **asdict(project),
         "context_sections": [asdict(section) for section in context_sections],
+        "context_history": {
+            section.section_key: workspace.context.history(project_id, section.section_key)
+            for section in context_sections
+        },
         **{f"{kind}s": values for kind, values in records.items()},
         "task_dependencies": dependencies,
         "activity_events": workspace.intelligence.timeline(project_id, limit=1000),
@@ -90,6 +94,7 @@ def import_workspace_project(
         raise ValueError("Unsupported handover schema version")
 
     sections_by_key: dict[str, str] = {}
+    section_revisions: dict[str, int] = {}
     raw_sections = source.get("context_sections", [])
     if not isinstance(raw_sections, list) or len(raw_sections) > len(CONTEXT_TITLES):
         raise ValueError("Context sections must be a list of at most six items")
@@ -107,7 +112,48 @@ def import_workspace_project(
             raise ValueError(f"Unknown or duplicate context section: {key}")
         if not isinstance(content, str) or len(content) > 200_000:
             raise ValueError(f"Invalid context content for section: {key}")
+        revision = section.get("revision", 1)
+        if not isinstance(revision, int) or isinstance(revision, bool) or revision < 1:
+            raise ValueError(f"Invalid context revision for section: {key}")
         sections_by_key[key] = content
+        section_revisions[key] = revision
+
+    raw_history = source.get("context_history", {})
+    if not isinstance(raw_history, dict) or set(raw_history) - set(CONTEXT_TITLES):
+        raise ValueError("Context history must map known section keys to revision lists")
+    history_by_key: dict[str, list[dict[str, Any]]] = {}
+    for key, entries in raw_history.items():
+        if key not in sections_by_key:
+            raise ValueError(f"Context history has no matching section: {key}")
+        if not isinstance(entries, list) or not entries or len(entries) > 1000:
+            raise ValueError(f"Context history for {key} must contain 1–1,000 revisions")
+        validated_entries = []
+        for entry in entries:
+            if not isinstance(entry, dict) or set(entry) - {"revision", "title", "content", "created_at"}:
+                raise ValueError(f"Invalid context history entry for {key}")
+            revision = entry.get("revision")
+            title = entry.get("title")
+            content = entry.get("content")
+            created_at = entry.get("created_at")
+            if not isinstance(revision, int) or isinstance(revision, bool) or revision < 1:
+                raise ValueError(f"Invalid context history revision for {key}")
+            if not isinstance(title, str) or not isinstance(content, str) or len(content) > 200_000:
+                raise ValueError(f"Invalid context history content for {key}")
+            if created_at is not None and (not isinstance(created_at, str) or len(created_at) > 64):
+                raise ValueError(f"Invalid context history timestamp for {key}")
+            validated_entries.append({
+                "revision": revision, "title": title, "content": content,
+                "created_at": created_at,
+            })
+        validated_entries.sort(key=lambda item: item["revision"])
+        revision_numbers = [item["revision"] for item in validated_entries]
+        if revision_numbers != list(range(1, len(validated_entries) + 1)):
+            raise ValueError(f"Context history for {key} must have contiguous revisions")
+        if revision_numbers[-1] != section_revisions.get(key, 1):
+            raise ValueError(f"Context history does not match current revision for {key}")
+        if validated_entries[-1]["content"] != sections_by_key[key]:
+            raise ValueError(f"Context history does not match current content for {key}")
+        history_by_key[key] = validated_entries
 
     kinds = ("decision", "task", "milestone", "reference")
     raw_records: dict[str, list[dict[str, Any]]] = {}
@@ -226,18 +272,27 @@ def import_workspace_project(
             for key, title in CONTEXT_TITLES.items():
                 section_id = str(uuid4())
                 content = sections_by_key.get(key, "")
+                current_revision = section_revisions.get(key, 1)
                 connection.execute(
                     """INSERT INTO context_sections
                        (section_id, project_id, section_key, title, content, revision, updated_at)
-                       VALUES (?, ?, ?, ?, ?, 1, ?)""",
-                    (section_id, project_id, key, title, content, now),
+                       VALUES (?, ?, ?, ?, ?, ?, ?)""",
+                    (section_id, project_id, key, title, content, current_revision, now),
                 )
-                connection.execute(
-                    """INSERT INTO context_revisions
-                       (revision_id, section_id, revision, title, content, created_at)
-                       VALUES (?, ?, 1, ?, ?, ?)""",
-                    (str(uuid4()), section_id, title, content, now),
-                )
+                revisions = history_by_key.get(key) or [{
+                    "revision": 1, "title": title, "content": content, "created_at": now,
+                }]
+                for revision in revisions:
+                    connection.execute(
+                        """INSERT INTO context_revisions
+                           (revision_id, section_id, revision, title, content, created_at)
+                           VALUES (?, ?, ?, ?, ?, ?)""",
+                        (
+                            str(uuid4()), section_id, revision["revision"],
+                            revision["title"], revision["content"],
+                            revision["created_at"] or now,
+                        ),
+                    )
 
             for kind in kinds:
                 table, id_column = workspace.intelligence.TABLES[kind]
