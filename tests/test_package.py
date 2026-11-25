@@ -139,3 +139,15 @@ def test_import_rejects_tampered_package_without_partial_output(tmp_path: Path) 
 def test_archive_paths_reject_traversal_and_platform_unsafe_names(archive_path: str) -> None:
     with pytest.raises(PackageError):
         _safe_archive_name(archive_path)
+
+
+def test_import_rejects_platform_unsafe_destination_name(tmp_path: Path) -> None:
+    source = tmp_path / "source"
+    source.mkdir()
+    package = tmp_path / "safe.thread"
+    create_package(source, package, ProjectContext.create("Safe package").to_dict())
+
+    with pytest.raises(PackageError, match="Platform-unsafe"):
+        import_package(package, tmp_path / "bad:name")
+
+    assert not (tmp_path / "bad:name").exists()
