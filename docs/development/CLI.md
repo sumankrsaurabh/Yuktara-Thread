@@ -50,6 +50,20 @@ List active projects:
 thread project list --database ./workspace.sqlite3
 ```
 
+Create a consistent, integrity-checked SQLite snapshot. The output path must be new; existing files are never overwritten:
+
+```bash
+thread workspace backup --database ./workspace.sqlite3 --output ./workspace.backup
+```
+
+Restore a valid backup into a separate, new database file:
+
+```bash
+thread workspace restore --backup ./workspace.backup --database ./restored-workspace.sqlite3
+```
+
+Backup uses SQLite's online backup API, so committed data in the WAL is included consistently. Restore validates SQLite integrity, foreign-key constraints, migration history and required workspace tables before publishing the new file. It never replaces an existing database. Backups are not encrypted; protect them as carefully as the original workspace.
+
 Include archived projects:
 
 ```bash
