@@ -9,6 +9,7 @@ from yuktara_thread.application.backup import backup_workspace, restore_workspac
 from yuktara_thread.application.handover import export_workspace_project, import_workspace_project
 from yuktara_thread.application.workspace import WorkspaceService
 from yuktara_thread.application.secret_scan import scan_selected_files
+from yuktara_thread.application.search import search_workspace
 from yuktara_thread.domain.models import ProjectContext
 from yuktara_thread.infrastructure.package import (
     PackageError, create_package, import_package, preview_package, verify_package,
@@ -43,6 +44,12 @@ def build_parser() -> argparse.ArgumentParser:
                            help="New backup file path (required for backup)")
     workspace.add_argument("--backup", type=Path,
                            help="Existing backup file path (required for restore)")
+
+    search = commands.add_parser("search", help="Search local workspace project context and records")
+    search.add_argument("--database", required=True, type=Path)
+    search.add_argument("--query", required=True)
+    search.add_argument("--limit", type=int, default=50)
+    search.add_argument("--include-archived", action="store_true")
 
     desktop = commands.add_parser("desktop", help="Open the native desktop workspace")
     desktop.add_argument("--database", required=True, type=Path,
@@ -115,6 +122,17 @@ def main(argv: list[str] | None = None) -> int:
                 print(json.dumps({"restored": True, "backup": str(args.backup),
                                   "database": str(restored)}, indent=2))
                 return 0
+        if args.command == "search":
+            workspace = WorkspaceService(args.database)
+            results = search_workspace(
+                workspace, args.query, limit=args.limit,
+                include_archived=args.include_archived,
+            )
+            print(json.dumps({
+                "query": args.query, "result_count": len(results),
+                "results": results,
+            }, indent=2, ensure_ascii=False))
+            return 0
         if args.command == "desktop":
             from yuktara_thread.ui.app import run as run_desktop
             return run_desktop(args.database)
