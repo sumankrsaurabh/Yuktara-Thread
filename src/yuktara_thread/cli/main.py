@@ -1,27 +1,44 @@
-"""Command-line entry point."""
+"""Command-line entry point for packages and local workspaces."""
 from __future__ import annotations
-
 import argparse
 import json
 import sys
 from pathlib import Path
 
+from yuktara_thread.application.workspace import WorkspaceService
 from yuktara_thread.domain.models import ProjectContext
 from yuktara_thread.infrastructure.package import PackageError, create_package, verify_package
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="thread", description="Yuktara Thread project handover tools")
+    parser = argparse.ArgumentParser(prog="thread", description="Yuktara Thread tools")
     commands = parser.add_subparsers(dest="command", required=True)
 
-    create = commands.add_parser("create", help="Create a .thread package")
-    create.add_argument("--input", required=True, type=Path, help="Directory containing project files")
-    create.add_argument("--output", required=True, type=Path, help="Output .thread file")
-    create.add_argument("--name", default=None, help="Project name (defaults to input directory name)")
-    create.add_argument("--summary", default="", help="Short project summary")
+    create = commands.add_parser("create", help="Create a .thread handover package")
+    create.add_argument("--input", required=True, type=Path)
+    create.add_argument("--output", required=True, type=Path)
+    create.add_argument("--name")
+    create.add_argument("--summary", default="")
 
     verify = commands.add_parser("verify", help="Verify a .thread package")
     verify.add_argument("package", type=Path)
+
+    workspace = commands.add_parser("workspace", help="Initialize a local workspace")
+    workspace.add_argument("action", choices=["init"])
+    workspace.add_argument("--database", required=True, type=Path)
+
+    project = commands.add_parser("project", help="Manage local workspace projects")
+    project_actions = project.add_subparsers(dest="project_action", required=True)
+    project_create = project_actions.add_parser("create", help="Create a project")
+    project_create.add_argument("--database", required=True, type=Path)
+    project_create.add_argument("--name", required=True)
+    project_create.add_argument("--summary", default="")
+    project_list = project_actions.add_parser("list", help="List projects")
+    project_list.add_argument("--database", required=True, type=Path)
+    project_list.add_argument("--include-archived", action="store_true")
+    project_archive = project_actions.add_parser("archive", help="Archive a project")
+    project_archive.add_argument("--database", required=True, type=Path)
+    project_archive.add_argument("--project-id", required=True)
     return parser
 
 
@@ -29,16 +46,41 @@ def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     try:
         if args.command == "create":
-            name = args.name or args.input.name
-            project = ProjectContext.create(name, args.summary)
-            result = create_package(args.input, args.output, project.to_dict())
-            print(f"Created package: {result}")
+            project = ProjectContext.create(args.name or args.input.name, args.summary)
+            path = create_package(args.input, args.output, project.to_dict())
+            print(f"Created package: {path}")
             return 0
         if args.command == "verify":
-            result = verify_package(args.package)
-            print(json.dumps(result, indent=2, ensure_ascii=False))
+            print(json.dumps(verify_package(args.package), indent=2, ensure_ascii=False))
             return 0
-    except (PackageError, ValueError, OSError) as exc:
+        if args.command == "workspace":
+            workspace = WorkspaceService(args.database)
+            print(json.dumps({"initialized": True, "schema_version": workspace.schema_version,
+                              "database": str(args.database)}, indent=2))
+            return 0
+        if args.command == "project":
+            workspace = WorkspaceService(args.database)
+            if args.project_action == "create":
+                project = workspace.create_project(args.name, args.summary)
+                print(json.dumps({
+                    "project_id": project.project_id, "name": project.name,
+                    "summary": project.summary, "status": project.status,
+                }, indent=2, ensure_ascii=False))
+                return 0
+            if args.project_action == "list":
+                projects = workspace.list_projects(args.include_archived)
+                print(json.dumps([
+                    {"project_id": p.project_id, "name": p.name, "summary": p.summary,
+                     "status": p.status, "updated_at": p.updated_at}
+                    for p in projects
+                ], indent=2, ensure_ascii=False))
+                return 0
+            if args.project_action == "archive":
+                project = workspace.archive_project(args.project_id)
+                print(json.dumps({"project_id": project.project_id, "status": project.status},
+                                 indent=2))
+                return 0
+    except (PackageError, ValueError, OSError, LookupError, RuntimeError) as exc:
         print(f"Error: {exc}", file=sys.stderr)
         return 2
     return 1
