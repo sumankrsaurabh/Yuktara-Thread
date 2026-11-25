@@ -6,7 +6,7 @@ import pytest
 PySide6 = pytest.importorskip("PySide6")
 
 from PySide6.QtCore import QCoreApplication, QEvent, Qt
-from PySide6.QtWidgets import QApplication, QMessageBox, QPlainTextEdit, QTabWidget
+from PySide6.QtWidgets import QApplication, QLabel, QMessageBox, QTabWidget
 
 from yuktara_thread.domain.models import ProjectContext
 from yuktara_thread.infrastructure.package import create_package, preview_package
