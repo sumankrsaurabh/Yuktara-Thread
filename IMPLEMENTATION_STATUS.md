@@ -10,7 +10,7 @@
 - [x] Archive path hardening for traversal, non-canonical paths, Windows-reserved names and non-regular entries.
 - [x] SQLite workspace with ordered transactional migrations (schema v1–v3).
 - [x] Project create/get/list/update/archive with transactional activity events.
-- [x] Six structured context sections with append-only revision snapshots and optimistic concurrency.
+- [x] Six structured context sections with append-only revision snapshots, optimistic concurrency, desktop history inspection and restore-as-new-revision.
 - [x] Context revision events in the project timeline.
 - [x] Decision, task, milestone and reference create/list/update operations.
 - [x] Recoverable soft-delete and restore for decisions, tasks, milestones and references, with audited lifecycle events.
@@ -34,9 +34,9 @@
 - [x] Local bounded secret-pattern scan before CLI and desktop export; findings do not reveal matched values and require explicit acknowledgement.
 - [x] SQLite online backup and validated restore to a new database path, with no-overwrite publication in CLI and desktop.
 - [x] Bounded local search across project summaries, context, decisions, tasks, milestones and references, with archived-project filtering.
-- [x] Workspace-aware package export for context sections, decisions, tasks, milestones, references, task dependencies and recent activity.
+- [x] Workspace-aware package export for context sections and their revision bodies, decisions, tasks, milestones, references, task dependencies and recent activity.
 - [x] CLI command for workspace-aware project export with an explicit selected-files directory.
-- [x] Recipient-side workspace import with new local IDs, context/record restoration and task dependency remapping.
+- [x] Recipient-side workspace import with new local IDs, full context revision history restoration, current records and task dependency remapping.
 - [x] Atomic SQLite restoration transaction; failed database restoration removes newly extracted files.
 - [x] Desktop package preview can import a handover into the current workspace.
 - [x] CLI `preview` and `import` commands for verified packages.
@@ -51,7 +51,8 @@
 
 - [x] Read-only layered task dependency graph in the desktop Tasks tab.
 
-- [ ] Historical context revision-body export and configurable activity-history limits.
+- [x] Historical context revision-body export/import and desktop revision inspection/restoration as a new snapshot.
+- [ ] Configurable activity-history limits and paginated exports.
 - [ ] Import conflict resolution, merge/replace workflows and full source activity-history replay.
 - [ ] Broader secret coverage, configurable exclusions, and independent validation of secret-scan false positives/negatives.
 
