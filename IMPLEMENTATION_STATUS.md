@@ -14,6 +14,7 @@
 - [x] Context revision events in the project timeline.
 - [x] Decision, task, milestone and reference create/list/update operations.
 - [x] Recoverable soft-delete and restore for decisions, tasks, milestones and references, with audited lifecycle events.
+- [x] Explicit age-based purge with dry-run by default, confirmation required for permanent deletion, and retained purge audit event.
 - [x] Desktop deleted-record review and restore dialog; edits to deleted records are rejected until restoration.
 - [x] Append-only project event records for project, context, intelligence entity and dependency mutations.
 - [x] Task prerequisite relationships with cross-project, self-link and cycle rejection, plus audited edge removal.
@@ -45,7 +46,7 @@
 - [x] Automated core tests and GitHub Actions Python 3.11–3.13 matrix.
 
 ## Not yet implemented
-- [ ] Entity soft-delete retention/purge policy and event retention/export policy.
+- [x] Explicit, dry-run-first soft-delete retention purge with a permanent audit event; activity events are retained indefinitely by default and can be exported.
 - [ ] Desktop design-system refinement, accessibility and keyboard interaction audit.
 
 - [x] Read-only layered task dependency graph in the desktop Tasks tab.
