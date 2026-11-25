@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import asdict
+import json
 from datetime import datetime, timezone
 from pathlib import Path
 import shutil
@@ -118,14 +119,17 @@ def import_workspace_project(
                         raise ValueError(f"{kind} due_at must be text or null")
                 elif not isinstance(value, str):
                     raise ValueError(f"{kind} field {key} must be text")
-            raw_records[kind].append(workspace.intelligence._validate(kind, values))
+            validated = workspace.intelligence._validate(kind, values)
+            if kind == "task":
+                validated["source_task_id"] = record.get("task_id")
+            raw_records[kind].append(validated)
 
     raw_dependencies = source.get("task_dependencies", [])
     if not isinstance(raw_dependencies, list) or len(raw_dependencies) > 5000:
         raise ValueError("Task prerequisites must be a list of at most 5,000 items")
     source_task_ids = []
     for task in raw_records["task"]:
-        source_id = task.get("task_id")
+        source_id = task.get("source_task_id")
         if not isinstance(source_id, str) or not source_id or source_id in source_task_ids:
             raise ValueError("Every exported task must have a unique task ID")
         source_task_ids.append(source_id)
@@ -203,16 +207,11 @@ def import_workspace_project(
                 table, id_column = workspace.intelligence.TABLES[kind]
                 for record in raw_records[kind]:
                     record_id = (
-                        task_id_map[record["task_id"]]
+                        task_id_map[record["source_task_id"]]
                         if kind == "task" else str(uuid4())
                     )
                     data = dict(record)
-                    if kind == "task":
-                        data.pop("task_id", None)
-                    if kind == "decision":
-                        data["alternatives_json"] = __import__("json").dumps(
-                            data.pop("alternatives", []), ensure_ascii=False
-                        )
+                    data.pop("source_task_id", None)
                     columns = [id_column, "project_id", *data.keys(), "created_at", "updated_at"]
                     values = [record_id, project_id, *data.values(), now, now]
                     connection.execute(
