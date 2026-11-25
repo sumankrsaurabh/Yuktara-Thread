@@ -21,12 +21,16 @@
 
 ## P3 — Desktop MVP
 - [x] Initial PySide6 desktop shell and workspace navigation.
-- [x] Context editor, intelligence list workflows and activity timeline.
+- [x] Context editor and activity timeline.
+- [x] Structured create/edit forms for decisions, tasks, milestones and references.
+- [x] Offscreen Qt smoke-test harness (awaiting passing CI verification).
+- [ ] Project metadata editing and archive controls.
+- [ ] Task dependency editing and visualization.
+- [ ] Human-readable activity details and filters.
 - [ ] Desktop design-system refinement and accessibility.
-- [ ] Project overview, context editor and intelligence screens.
 - [ ] Package preview, safe import and handover report.
 - [ ] Secret inclusion warnings and readiness checks.
-- [ ] Windows/Linux/macOS packaging.
+- [ ] Windows/Linux/macOS packaging and platform QA.
 
 ## P4 — Optional intelligence and collaboration
 - [ ] Local AI provider adapters.
