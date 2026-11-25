@@ -7,6 +7,7 @@ from pathlib import Path
 
 from yuktara_thread.application.handover import export_workspace_project, import_workspace_project
 from yuktara_thread.application.workspace import WorkspaceService
+from yuktara_thread.application.secret_scan import scan_selected_files
 from yuktara_thread.domain.models import ProjectContext
 from yuktara_thread.infrastructure.package import (
     PackageError, create_package, import_package, preview_package, verify_package,
@@ -59,6 +60,7 @@ def build_parser() -> argparse.ArgumentParser:
     project_export.add_argument("--files", required=True, type=Path,
                                 help="Directory containing explicitly selected handover files")
     project_export.add_argument("--output", required=True, type=Path)
+    project_export.add_argument("--allow-potential-secrets", action="store_true",\n                                help="Proceed after reviewing local potential-secret warnings")
     project_import = project_actions.add_parser("import", help="Import a .thread handover into the workspace")
     project_import.add_argument("--database", required=True, type=Path)
     project_import.add_argument("--package", required=True, type=Path)
@@ -117,12 +119,21 @@ def main(argv: list[str] | None = None) -> int:
                                  indent=2))
                 return 0
             if args.project_action == "export":
+                secret_scan = scan_selected_files(args.files)
+                if secret_scan["finding_count"] and not args.allow_potential_secrets:
+                    print(json.dumps({
+                        "exported": False,
+                        "requires_confirmation": True,
+                        "message": "Potential secrets were found. Review the paths and rules; rerun with --allow-potential-secrets only if you intend to include them.",
+                        "secret_scan": secret_scan,
+                    }, indent=2, ensure_ascii=False))
+                    return 3
                 package_path = export_workspace_project(
                     workspace, args.project_id, args.files, args.output
                 )
                 print(json.dumps({
                     "exported": True, "project_id": args.project_id,
-                    "package": str(package_path),
+                    "package": str(package_path), "secret_scan": secret_scan,
                 }, indent=2, ensure_ascii=False))
                 return 0
             if args.project_action == "import":
