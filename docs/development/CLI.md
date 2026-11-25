@@ -61,7 +61,7 @@ The equivalent dedicated launcher is `thread-desktop --database ./workspace.sqli
 
 The current desktop foundation includes project selection and creation, six structured context editors with revision conflict protection, and tabs for decisions, tasks, milestones, references and project activity. Each intelligence tab supports create, edit and delete; the forms expose the structured fields stored by the domain layer. Deletions are recorded in project history.
 
-The UI remains pre-alpha. Project metadata/archive controls, dependency editing and visualization, detailed activity presentation, keyboard/accessibility validation, package preview/import/export and installer validation are not complete.
+The UI remains pre-alpha. Project metadata editing and archive controls are available; archiving retains project data and removes the project from the active list. Task prerequisites can be added and removed from the Tasks tab; the service layer rejects self-links, cross-project links and cycles. A dependency graph visualization, archived-project restore UI, detailed activity filters, keyboard/accessibility validation, package preview/import/export and installer validation are not complete.
 
 ## Notes
 
