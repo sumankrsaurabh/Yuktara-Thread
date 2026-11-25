@@ -6,11 +6,12 @@ from datetime import datetime
 import json
 
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QBrush, QColor, QPen
 from PySide6.QtWidgets import (
     QComboBox, QDialog, QFormLayout, QFrame, QHBoxLayout, QInputDialog,
     QFileDialog, QLabel, QLineEdit, QListWidget, QListWidgetItem, QMainWindow, QMessageBox,
     QPushButton, QPlainTextEdit, QStackedWidget, QTabWidget, QVBoxLayout, QWidget,
-    QGraphicsView, QGraphicsScene, QPen, QBrush, QColor,
+    QGraphicsView, QGraphicsScene,
 )
 
 from yuktara_thread.application.backup import backup_workspace, restore_workspace
