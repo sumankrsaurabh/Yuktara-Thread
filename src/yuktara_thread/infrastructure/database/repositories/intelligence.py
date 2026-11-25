@@ -133,7 +133,8 @@ class ProjectIntelligenceRepository:
             if project is None or project["status"] != "active":
                 raise LookupError("Active project not found")
             cursor = connection.execute(
-                f"UPDATE {table} SET {assignments}, updated_at = ? WHERE {id_column} = ? AND project_id = ?",
+                f"UPDATE {table} SET {assignments}, updated_at = ? "
+                f"WHERE {id_column} = ? AND project_id = ? AND deleted_at IS NULL",
                 (*data.values(), now, entity_id, project_id),
             )
             if cursor.rowcount != 1:
@@ -211,6 +212,11 @@ class ProjectIntelligenceRepository:
     def add_task_dependency(self, project_id: str, task_id: str, depends_on_task_id: str) -> None:
         now = _now()
         with self.database.transaction() as connection:
+            project = connection.execute(
+                "SELECT status FROM projects WHERE project_id = ?", (project_id,)
+            ).fetchone()
+            if project is None or project["status"] != "active":
+                raise LookupError("Active project not found")
             rows = connection.execute(
                 "SELECT task_id FROM tasks WHERE project_id = ? AND deleted_at IS NULL AND task_id IN (?, ?)",
                 (project_id, task_id, depends_on_task_id),
