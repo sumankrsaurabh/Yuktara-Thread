@@ -121,7 +121,7 @@ def import_workspace_project(
                         raise ValueError(f"{kind} due_at must be text or null")
                 elif not isinstance(value, str):
                     raise ValueError(f"{kind} field {key} must be text")
-            validated = workspace.intelligence._validate(kind, values)
+            validated = workspace.intelligence.validate_record_fields(kind, values)
             if kind == "task":
                 validated["source_task_id"] = record.get("task_id")
             raw_records[kind].append(validated)
