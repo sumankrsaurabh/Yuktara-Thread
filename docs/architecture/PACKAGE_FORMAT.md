@@ -63,6 +63,10 @@ The basic `thread create` command remains supported. It creates a package with p
 
 SHA-256 detects accidental or malicious content changes relative to the manifest. It does **not** prove who created the package. Format v1 packages are not encrypted or digitally signed.
 
+## Import inspection and conflict policy
+
+Before workspace import, the application can inspect a verified package against the local workspace without extracting files or changing database records. It reports candidate projects by exact source project ID or case-insensitive project name, then checks exact case-insensitive/whitespace-trimmed title collisions for decisions, tasks, milestones and references within those candidate projects. These matches are advisory: identical titles do not prove that two records represent the same work. The desktop UI asks for explicit confirmation when candidates or title collisions are found. The current importer remains import-as-new only; it never merges, replaces or modifies an existing project. Semantic matching, field-level diffs and user-directed merge workflows are not implemented.
+
 ## Import behavior
 
 1. Verify the archive and every file digest without extraction.
