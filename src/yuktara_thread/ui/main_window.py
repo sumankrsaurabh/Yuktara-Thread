@@ -92,7 +92,7 @@ class EntityEditorDialog(QDialog):
             if widget_type == "area":
                 widget = QPlainTextEdit()
                 widget.setPlainText(
-                    "\\n".join(initial.get(key, [])) if key == "alternatives"
+                    "\n".join(initial.get(key, [])) if key == "alternatives"
                     else str(initial.get(key) or "")
                 )
                 widget.setMinimumHeight(72)
@@ -372,7 +372,7 @@ class ActivityPanel(QWidget):
                 continue
             if query and query not in searchable:
                 continue
-            item = QListWidgetItem(f"{label}  ·  {timestamp}\\n{detail}".rstrip())
+            item = QListWidgetItem(f"{label}  ·  {timestamp}\n{detail}".rstrip())
             item.setData(Qt.ItemDataRole.UserRole, event)
             self.list.addItem(item)
 
@@ -449,7 +449,7 @@ class PackagePreviewDialog(QDialog):
         self.file_list = QPlainTextEdit()
         self.file_list.setReadOnly(True)
         self.file_list.setPlainText(
-            "\\n".join(
+            "\n".join(
                 f"{item['path']}  ·  {item['size']:,} bytes"
                 for item in preview["files"]
             ) or "This package contains no files."
@@ -502,7 +502,7 @@ class PackagePreviewDialog(QDialog):
             )
             QMessageBox.information(
                 self, "Files extracted",
-                f"Verified package files were extracted to:\\n{destination}",
+                f"Verified package files were extracted to:\n{destination}",
             )
         except (PackageError, OSError, ValueError) as exc:
             QMessageBox.warning(self, "Could not extract package", str(exc))
