@@ -218,3 +218,36 @@ def test_record_restore_cli(tmp_path: Path, capsys) -> None:
     restored = json.loads(capsys.readouterr().out)
     assert restored["restored"] is True
     assert restored["record"]["deleted_at"] is None
+
+
+
+def test_record_purge_cli_requires_explicit_confirmation(tmp_path: Path, capsys) -> None:
+    from yuktara_thread.application.workspace import WorkspaceService
+    from datetime import datetime, timedelta, timezone
+
+    database = tmp_path / "purge-cli.sqlite3"
+    workspace = WorkspaceService(database)
+    project = workspace.create_project("CLI retention")
+    task = workspace.intelligence.create_task(project.project_id, title="Old task")
+    workspace.intelligence.delete_record(project.project_id, "task", task["task_id"])
+    expired = (datetime.now(timezone.utc) - timedelta(days=60)).isoformat()
+    with workspace.database.transaction() as connection:
+        connection.execute(
+            "UPDATE tasks SET deleted_at = ? WHERE task_id = ?",
+            (expired, task["task_id"]),
+        )
+
+    args = [
+        "record", "purge-deleted", "--database", str(database),
+        "--project-id", project.project_id, "--entity-type", "task",
+        "--older-than-days", "30",
+    ]
+    assert main(args) == 0
+    preview = json.loads(capsys.readouterr().out)
+    assert preview["purged"] is False
+    assert preview["eligible_count"] == 1
+
+    assert main(args + ["--confirm"]) == 0
+    result = json.loads(capsys.readouterr().out)
+    assert result["purged"] is True
+    assert result["purged_count"] == 1
