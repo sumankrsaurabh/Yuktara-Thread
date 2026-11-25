@@ -8,6 +8,8 @@ import hashlib
 import json
 import os
 import stat
+import shutil
+import tempfile
 import zipfile
 from pathlib import Path, PurePosixPath
 from typing import Any
@@ -167,3 +169,116 @@ def verify_package(package_file: Path) -> dict[str, Any]:
             }
     except (zipfile.BadZipFile, UnicodeDecodeError, json.JSONDecodeError, KeyError) as exc:
         raise PackageError(f"Invalid package: {exc}") from exc
+
+
+def preview_package(package_file: Path) -> dict[str, Any]:
+    """Return a verified, non-extracting preview of a .thread package."""
+    verification = verify_package(package_file)
+    try:
+        with zipfile.ZipFile(package_file, "r") as archive:
+            manifest_bytes = archive.read("manifest.json")
+            manifest = json.loads(manifest_bytes.decode("utf-8"))
+    except (OSError, zipfile.BadZipFile, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise PackageError(f"Could not read package preview: {exc}") from exc
+
+    project = manifest.get("project")
+    if not isinstance(project, dict):
+        raise PackageError("Package project metadata must be a JSON object")
+
+    files = []
+    for item in manifest["files"]:
+        archive_path = _safe_archive_name(item["path"])
+        if not archive_path.startswith("files/") or archive_path == "files":
+            raise PackageError(f"Package file must be inside files/: {archive_path}")
+        files.append({
+            "path": archive_path[len("files/"):],
+            "size": item["size"],
+            "sha256": item["sha256"],
+        })
+    files.sort(key=lambda item: item["path"].casefold())
+    return {
+        **verification,
+        "project": project,
+        "files": files,
+        "manifest_sha256": hashlib.sha256(manifest_bytes).hexdigest(),
+    }
+
+
+def import_package(package_file: Path, destination: Path) -> Path:
+    """Safely extract a verified package into a new directory.
+
+    Extraction is staged in a sibling temporary directory. The destination is
+    published only after every file has been streamed and its size and digest
+    have been checked. Existing destinations are never overwritten.
+    """
+    preview = preview_package(package_file)
+    target = destination.expanduser()
+    if not target.name or target.name in {".", ".."}:
+        raise PackageError("Import destination must be a new directory path")
+    parent = target.parent.resolve(strict=True)
+    if not parent.is_dir():
+        raise PackageError("Import destination parent must be a directory")
+    target = parent / target.name
+    if target.exists() or target.is_symlink():
+        raise PackageError("Import destination already exists")
+
+    lock = parent / f".{target.name}.thread-import.lock"
+    try:
+        lock_fd = os.open(lock, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+    except FileExistsError as exc:
+        raise PackageError("Another import is already using this destination") from exc
+    os.close(lock_fd)
+
+    staging: Path | None = None
+    try:
+        if target.exists() or target.is_symlink():
+            raise PackageError("Import destination already exists")
+        staging = Path(tempfile.mkdtemp(prefix=f".{target.name}.thread-", dir=parent))
+        with zipfile.ZipFile(package_file, "r") as archive:
+            manifest_bytes = archive.read("manifest.json")
+            if hashlib.sha256(manifest_bytes).hexdigest() != preview["manifest_sha256"]:
+                raise PackageError("Package manifest changed during import")
+            manifest = json.loads(manifest_bytes.decode("utf-8"))
+            for item in manifest["files"]:
+                archive_path = _safe_archive_name(item["path"])
+                if not archive_path.startswith("files/") or archive_path == "files":
+                    raise PackageError(f"Package file must be inside files/: {archive_path}")
+                info = archive.getinfo(archive_path)
+                if info.is_dir():
+                    raise PackageError(f"Directory entries are not supported: {archive_path}")
+                mode = info.external_attr >> 16
+                file_type = stat.S_IFMT(mode)
+                if file_type not in (0, stat.S_IFREG) or stat.S_ISLNK(mode):
+                    raise PackageError(f"Non-regular file entry is not allowed: {archive_path}")
+
+                relative = PurePosixPath(archive_path)
+                output = staging.joinpath(*relative.parts)
+                output.parent.mkdir(parents=True, exist_ok=True)
+                digest = hashlib.sha256()
+                written = 0
+                with archive.open(info, "r") as source, output.open("xb") as sink:
+                    for chunk in iter(lambda: source.read(1024 * 1024), b""):
+                        written += len(chunk)
+                        if written > item["size"] or written > MAX_FILE_BYTES:
+                            raise PackageError(f"Expanded file exceeds declared size: {archive_path}")
+                        digest.update(chunk)
+                        sink.write(chunk)
+                if written != item["size"]:
+                    raise PackageError(f"Size mismatch during import: {archive_path}")
+                if digest.hexdigest() != item["sha256"]:
+                    raise PackageError(f"SHA-256 mismatch during import: {archive_path}")
+
+        if target.exists() or target.is_symlink():
+            raise PackageError("Import destination appeared during import")
+        os.rename(staging, target)
+        staging = None
+        return target
+    except (OSError, zipfile.BadZipFile, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise PackageError(f"Package import failed: {exc}") from exc
+    finally:
+        if staging is not None and staging.exists():
+            shutil.rmtree(staging, ignore_errors=True)
+        try:
+            lock.unlink()
+        except FileNotFoundError:
+            pass
