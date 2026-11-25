@@ -15,6 +15,7 @@
 - [x] Append-only context revision snapshots.
 - [x] Optimistic concurrency checks for context editing.
 - [x] Application-level WorkspaceService.
+- [x] CLI commands for workspace initialization and project create/list/archive.
 - [x] Initial package and workspace tests.
 - [x] GitHub Actions test matrix for Python 3.11–3.13.
 
