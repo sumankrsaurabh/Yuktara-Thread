@@ -17,13 +17,13 @@ def render_handover_report(preview: dict[str, Any]) -> str:
     files = sorted(preview.get("files", []), key=lambda item: item["path"].casefold())
     total_bytes = sum(int(item["size"]) for item in files)
 
-    context_sections = project.get("context_sections", [])
-    decisions = project.get("decisions", [])
-    tasks = project.get("tasks", [])
-    milestones = project.get("milestones", [])
-    references = project.get("references", [])
-    dependencies = project.get("task_dependencies", [])
-    events = project.get("activity_events", [])
+    context_sections = _list(project.get("context_sections", []))
+    decisions = _list(project.get("decisions", []))
+    tasks = _list(project.get("tasks", []))
+    milestones = _list(project.get("milestones", []))
+    references = _list(project.get("references", []))
+    dependencies = _list(project.get("task_dependencies", []))
+    events = _list(project.get("activity_events", []))
     lines = [
         f"# Handover: {name}",
         "",
