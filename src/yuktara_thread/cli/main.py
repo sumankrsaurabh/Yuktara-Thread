@@ -6,7 +6,9 @@ import sys
 from pathlib import Path
 
 from yuktara_thread.application.backup import backup_workspace, restore_workspace
-from yuktara_thread.application.handover import (\n    export_workspace_project, import_workspace_project, reconcile_workspace_imports,\n)
+from yuktara_thread.application.handover import ( 
+    export_workspace_project, import_workspace_project, reconcile_workspace_imports,
+)
 from yuktara_thread.application.workspace import WorkspaceService
 from yuktara_thread.application.secret_scan import scan_selected_files
 from yuktara_thread.application.search import search_workspace
