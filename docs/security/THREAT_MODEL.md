@@ -27,7 +27,8 @@
 - No extraction or execution during verification or preview.
 - Staged extraction into a new destination directory; existing destinations are not overwritten.
 - Manifest recheck and per-file size/hash recheck while extracting; failed staging directories are removed.
-- Workspace import validates metadata and dependency graphs before extraction, then restores database records in one transaction; a failed database transaction removes the newly extracted directory.
+- Workspace import validates metadata, context revision continuity, source activity entries and dependency graphs before extraction, then restores database records in one transaction; a failed database transaction removes the newly extracted directory.
+- Imported source activity events carry explicit origin metadata and are displayed as imported/unverified; package contents cannot prove the identity of the original actor.
 - Package creation uses a unique temporary file, verifies the completed archive before publishing it and rejects output paths inside the selected source directory.
 
 ## Planned mitigations
