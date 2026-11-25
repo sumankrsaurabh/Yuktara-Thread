@@ -5,9 +5,9 @@ import pytest
 
 PySide6 = pytest.importorskip("PySide6")
 
-from PySide6.QtWidgets import QApplication, QTabWidget
+from PySide6.QtWidgets import QApplication, QPlainTextEdit, QTabWidget
 
-from yuktara_thread.ui.main_window import MainWindow
+from yuktara_thread.ui.main_window import EntityEditorDialog, MainWindow
 
 
 @pytest.fixture(scope="module")
@@ -38,3 +38,19 @@ def test_main_window_loads_and_opens_project(tmp_path, application):
 
     window.close()
     application.processEvents()
+
+
+def test_decision_editor_preserves_structured_fields(application):
+    dialog = EntityEditorDialog("decision")
+    dialog.fields["title"].setText("Use SQLite")
+    dialog.fields["problem"].setPlainText("Where should local data live?")
+    dialog.fields["alternatives"].setPlainText("JSON files\\nSQLite")
+    dialog.fields["rationale"].setPlainText("Transactional updates and queries.")
+
+    values = dialog.values()
+
+    assert values["title"] == "Use SQLite"
+    assert values["problem"] == "Where should local data live?"
+    assert values["alternatives"] == ["JSON files", "SQLite"]
+    assert values["status"] == "proposed"
+    dialog.close()
