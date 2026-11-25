@@ -177,10 +177,13 @@ def import_workspace_project(
         raise ValueError("Activity history must contain at most 1,000 events")
 
     extracted = import_package(package_file, files_destination)
-    confirmed_preview = preview_package(package_file)
-    if confirmed_preview["manifest_sha256"] != preview["manifest_sha256"]:
+    try:
+        confirmed_preview = preview_package(package_file)
+        if confirmed_preview["manifest_sha256"] != preview["manifest_sha256"]:
+            raise PackageError("Package changed during workspace import")
+    except Exception:
         shutil.rmtree(extracted, ignore_errors=True)
-        raise PackageError("Package changed during workspace import")
+        raise
     project_id = str(uuid4())
     now = datetime.now(timezone.utc).isoformat()
     try:
