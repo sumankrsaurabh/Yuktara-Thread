@@ -14,12 +14,17 @@
 - [x] Append-only project event records for project, context, intelligence entity and dependency mutations.
 - [x] Task prerequisite relationships with cross-project, self-link and cycle rejection, plus audited edge removal.
 - [x] Bounded project activity timeline query.
-- [x] Automated tests and GitHub Actions Python 3.11–3.13 matrix.
+- [x] Initial PySide6 desktop shell with project navigation, context editor, intelligence tabs and activity timeline.
+- [x] Structured desktop forms for decision, task, milestone and reference fields.
+- [x] Offscreen Qt smoke tests and a dedicated Linux desktop CI job (runtime verification pending latest workflow result).
+- [x] Automated core tests and GitHub Actions Python 3.11–3.13 matrix.
 
 ## Not yet implemented
 - [ ] Entity-specific soft-delete/restore policy and event retention/export policy.
-- [x] Initial PySide6 desktop shell with project navigation, context editor, intelligence list workflows and activity timeline.
-- [ ] Desktop UI design-system refinement, accessibility and interaction polish.
+- [ ] Desktop design-system refinement, accessibility and keyboard interaction audit.
+- [ ] Project metadata editing and archive controls in the desktop UI.
+- [ ] Task dependency editing and visualization in the desktop UI.
+- [ ] Human-readable activity labels, details and filters.
 - [ ] Package preview and safe transactional import.
 - [ ] Human-readable handover report and readiness scoring.
 - [ ] Search, backup and recovery workflows.
@@ -29,4 +34,4 @@
 - [ ] Independent security review and release qualification.
 
 ## Verification
-The GitHub Actions workflow tests Python 3.11, 3.12 and 3.13. Check the Actions tab for the latest commit's result; queued or running jobs are not passing results.
+Core automated tests run on Python 3.11, 3.12 and 3.13. The desktop job installs PySide6 and Qt runtime libraries and runs the UI offscreen on Linux. A passing workflow is required before claiming runtime verification; this CI job does not replace Windows/macOS testing or interactive manual QA.
