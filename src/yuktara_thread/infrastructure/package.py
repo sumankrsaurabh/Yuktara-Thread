@@ -32,8 +32,18 @@ def _safe_archive_name(name: str) -> str:
     path = PurePosixPath(name)
     if path.is_absolute() or any(part in ("", ".", "..") for part in path.parts):
         raise PackageError(f"Unsafe archive path: {name!r}")
-    if path.parts and ":" in path.parts[0]:
-        raise PackageError(f"Drive-qualified archive path: {name!r}")
+    if path.as_posix() != name:
+        raise PackageError(f"Non-canonical archive path: {name!r}")
+    reserved = {"CON", "PRN", "AUX", "NUL"}
+    for part in path.parts:
+        if any(ord(character) < 32 or character in '<>:"|?*' for character in part):
+            raise PackageError(f"Platform-unsafe archive path: {name!r}")
+        if part.endswith((" ", ".")):
+            raise PackageError(f"Platform-unsafe archive path: {name!r}")
+        stem = part.split(".", 1)[0].upper()
+        if stem in reserved or stem in {f"COM{index}" for index in range(1, 10)} \\
+                or stem in {f"LPT{index}" for index in range(1, 10)}:
+            raise PackageError(f"Reserved device name in archive path: {name!r}")
     return path.as_posix()
 
 
