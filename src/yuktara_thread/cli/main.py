@@ -7,7 +7,9 @@ from pathlib import Path
 
 from yuktara_thread.application.workspace import WorkspaceService
 from yuktara_thread.domain.models import ProjectContext
-from yuktara_thread.infrastructure.package import PackageError, create_package, verify_package
+from yuktara_thread.infrastructure.package import (
+    PackageError, create_package, import_package, preview_package, verify_package,
+)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -22,6 +24,13 @@ def build_parser() -> argparse.ArgumentParser:
 
     verify = commands.add_parser("verify", help="Verify a .thread package")
     verify.add_argument("package", type=Path)
+
+    preview = commands.add_parser("preview", help="Preview a verified .thread package without extracting it")
+    preview.add_argument("package", type=Path)
+
+    package_import = commands.add_parser("import", help="Safely import a .thread package into a new directory")
+    package_import.add_argument("package", type=Path)
+    package_import.add_argument("--destination", required=True, type=Path)
 
     workspace = commands.add_parser("workspace", help="Initialize a local workspace")
     workspace.add_argument("action", choices=["init"])
@@ -56,6 +65,15 @@ def main(argv: list[str] | None = None) -> int:
             return 0
         if args.command == "verify":
             print(json.dumps(verify_package(args.package), indent=2, ensure_ascii=False))
+            return 0
+        if args.command == "preview":
+            preview = preview_package(args.package)
+            preview.pop("manifest_sha256", None)
+            print(json.dumps(preview, indent=2, ensure_ascii=False))
+            return 0
+        if args.command == "import":
+            destination = import_package(args.package, args.destination)
+            print(json.dumps({"imported": True, "destination": str(destination)}, indent=2))
             return 0
         if args.command == "workspace":
             workspace = WorkspaceService(args.database)
