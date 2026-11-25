@@ -500,12 +500,19 @@ class PackagePreviewDialog(QDialog):
         milestones = len(project.get("milestones")) if isinstance(project.get("milestones"), list) else 0
         references = len(project.get("references")) if isinstance(project.get("references"), list) else 0
         context_sections = len(project.get("context_sections")) if isinstance(project.get("context_sections"), list) else 0
+        readiness = project.get("handover_readiness")
+        readiness_line = (
+            f"Readiness: {readiness.get('score')}% · "
+            f"{str(readiness.get('status', 'unknown')).replace('_', ' ')}"
+            if isinstance(readiness, dict) and isinstance(readiness.get("score"), int)
+            else "Readiness: not calculated"
+        )
         overview = QLabel(
             f"{name}\n{summary}\n\n"
             f"{preview['file_count']} files · {total_bytes:,} bytes · "
             f"{context_sections} context sections · {decisions} decisions · "
             f"{tasks} tasks · {milestones} milestones · {references} references\n"
-            f"Format {preview['format_version']}"
+            f"{readiness_line}\nFormat {preview['format_version']}"
         )
         overview.setTextFormat(Qt.TextFormat.PlainText)
         overview.setWordWrap(True)
