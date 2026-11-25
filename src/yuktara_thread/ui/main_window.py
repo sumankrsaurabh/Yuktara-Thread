@@ -445,11 +445,11 @@ class PackagePreviewDialog(QDialog):
         name = str(project.get("name") or "Unnamed project")
         summary = str(project.get("summary") or "No summary provided")
         total_bytes = sum(int(item["size"]) for item in preview["files"])
-        decisions = len(project.get("decisions", []))
-        tasks = len(project.get("tasks", []))
-        milestones = len(project.get("milestones", []))
-        references = len(project.get("references", []))
-        context_sections = len(project.get("context_sections", []))
+        decisions = len(project.get("decisions")) if isinstance(project.get("decisions"), list) else 0
+        tasks = len(project.get("tasks")) if isinstance(project.get("tasks"), list) else 0
+        milestones = len(project.get("milestones")) if isinstance(project.get("milestones"), list) else 0
+        references = len(project.get("references")) if isinstance(project.get("references"), list) else 0
+        context_sections = len(project.get("context_sections")) if isinstance(project.get("context_sections"), list) else 0
         overview = QLabel(
             f"{name}\n{summary}\n\n"
             f"{preview['file_count']} files · {total_bytes:,} bytes · "
