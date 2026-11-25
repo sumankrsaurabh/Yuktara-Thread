@@ -91,6 +91,12 @@ def import_workspace_project(
     for section in raw_sections:
         if not isinstance(section, dict):
             raise ValueError("Invalid context section")
+        allowed_section_keys = {
+            "section_id", "project_id", "section_key", "title", "content",
+            "revision", "updated_at",
+        }
+        if set(section) - allowed_section_keys:
+            raise ValueError("Context section contains unsupported fields")
         key, content = section.get("section_key"), section.get("content", "")
         if not isinstance(key, str) or key not in CONTEXT_TITLES or key in sections_by_key:
             raise ValueError(f"Unknown or duplicate context section: {key}")
@@ -109,6 +115,12 @@ def import_workspace_project(
             if not isinstance(record, dict):
                 raise ValueError(f"Invalid {kind} record")
             fields = workspace.intelligence.FIELDS[kind]
+            table, id_column = workspace.intelligence.TABLES[kind]
+            allowed_record_keys = fields | {
+                id_column, "project_id", "created_at", "updated_at",
+            }
+            if set(record) - allowed_record_keys:
+                raise ValueError(f"{kind.title()} record contains unsupported fields")
             values = {key: record[key] for key in fields if key in record}
             if not isinstance(values.get("title"), str) or not values["title"].strip():
                 raise ValueError(f"Every {kind} must have a title")
@@ -142,6 +154,8 @@ def import_workspace_project(
     for dependency in raw_dependencies:
         if not isinstance(dependency, dict):
             raise ValueError("Invalid task prerequisite record")
+        if set(dependency) - {"task_id", "depends_on_task_id", "created_at"}:
+            raise ValueError("Task prerequisite contains unsupported fields")
         task_source = dependency.get("task_id")
         prerequisite_source = dependency.get("depends_on_task_id")
         if (
