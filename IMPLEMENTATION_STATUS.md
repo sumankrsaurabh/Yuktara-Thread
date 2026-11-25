@@ -36,7 +36,7 @@
 - [x] Bounded local search across project summaries, context, decisions, tasks, milestones and references, with archived-project filtering.
 - [x] Workspace-aware package export for context sections and their revision bodies, decisions, tasks, milestones, references, task dependencies and recent activity.
 - [x] CLI command for workspace-aware project export with an explicit selected-files directory.
-- [x] Recipient-side workspace import with new local IDs, full context revision history restoration, current records and task dependency remapping.
+- [x] Recipient-side workspace import with new local IDs, full context revision history restoration, current records, task dependency remapping and marked source activity-history replay.
 - [x] Atomic SQLite restoration transaction; failed database restoration removes newly extracted files.
 - [x] Desktop package preview can import a handover into the current workspace.
 - [x] CLI `preview` and `import` commands for verified packages.
@@ -53,7 +53,8 @@
 
 - [x] Historical context revision-body export/import and desktop revision inspection/restoration as a new snapshot.
 - [ ] Configurable activity-history limits and paginated exports.
-- [ ] Import conflict resolution, merge/replace workflows and full source activity-history replay.
+- [x] Replay up to 1,000 validated source activity events on import, clearly marking them as imported/unverified.
+- [ ] Import conflict resolution and merge/replace workflows.
 - [ ] Broader secret coverage, configurable exclusions, and independent validation of secret-scan false positives/negatives.
 
 - [ ] Encryption, signatures and key management.
