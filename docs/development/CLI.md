@@ -86,6 +86,14 @@ Archive a project by its ID:
 thread project archive --database ./workspace.sqlite3 --project-id PROJECT_UUID
 ```
 
+Restore an archived project without recreating its records or activity history:
+
+```bash
+thread project restore --database ./workspace.sqlite3 --project-id PROJECT_UUID
+```
+
+The restore command only accepts archived projects. It returns the original project to the active list and appends a `project.restored` activity event.
+
 Export a complete workspace project as a `.thread` handover package. The selected files directory is explicit; only files inside that directory are included:
 
 ```bash
@@ -127,7 +135,7 @@ The equivalent dedicated launcher is `thread-desktop --database ./workspace.sqli
 
 The current desktop foundation includes project selection and creation, six structured context editors with revision conflict protection, and tabs for decisions, tasks, milestones, references and project activity. Each intelligence tab supports create, edit and delete; the forms expose the structured fields stored by the domain layer. Deletions are recorded in project history.
 
-The UI remains pre-alpha. Project metadata editing and archive controls are available; archiving retains project data and removes the project from the active list. Task prerequisites can be added and removed from the Tasks tab; the service layer rejects self-links, cross-project links and cycles. Activity supports text search and event-type filtering. The desktop shell can preview verified packages, save a Markdown handover report, extract files to a new folder, or import a package as a new project into the current workspace. The report includes project context, decisions, tasks, milestones, references, dependency details, a deterministic completeness indicator, file inventory and a recipient checklist. The indicator is not a guarantee of correctness or safety, and the report does not prove publisher identity. A dependency graph visualization, archived-project restore UI, activity date-range filters/export, keyboard/accessibility validation and installer validation are not complete.
+The UI remains pre-alpha. Project metadata editing and archive controls are available; archiving retains project data and removes the project from the active list. Task prerequisites can be added and removed from the Tasks tab; the service layer rejects self-links, cross-project links and cycles. Activity supports text search and event-type filtering. The desktop shell can preview verified packages, save a Markdown handover report, extract files to a new folder, or import a package as a new project into the current workspace. The report includes project context, decisions, tasks, milestones, references, dependency details, a deterministic completeness indicator, file inventory and a recipient checklist. The indicator is not a guarantee of correctness or safety, and the report does not prove publisher identity. A dependency graph visualization, activity date-range filters/export, keyboard/accessibility validation and installer validation are not complete.
 
 ## Notes
 
