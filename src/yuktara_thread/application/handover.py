@@ -511,7 +511,7 @@ def import_workspace_project(
     import_id = str(uuid4())
     project_id = str(uuid4())
     now = datetime.now(timezone.utc).isoformat()
-    destination_path = files_destination.expanduser().absolute()
+    destination_input = files_destination.expanduser()\n    destination_path = destination_input.parent.resolve(strict=True) / destination_input.name
     with workspace.database.transaction() as connection:
         connection.execute(
             """INSERT INTO handover_imports
