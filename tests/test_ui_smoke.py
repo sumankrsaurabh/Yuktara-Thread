@@ -11,7 +11,7 @@ from PySide6.QtWidgets import QApplication, QFileDialog, QInputDialog, QLabel, Q
 from yuktara_thread.domain.models import ProjectContext
 from yuktara_thread.infrastructure.package import create_package, preview_package
 from yuktara_thread.ui.main_window import (
-    ActivityPanel, ArchivedProjectsDialog, DeletedRecordsDialog, EntityEditorDialog, EntityPanel, MainWindow, PackagePreviewDialog, ReadinessPanel, SearchDialog,
+    ActivityPanel, ArchivedProjectsDialog, DeletedRecordsDialog, EntityEditorDialog, EntityPanel, MainWindow, PackagePreviewDialog, ReadinessPanel, SearchDialog, TaskDependencyGraphDialog,
 )
 
 
@@ -428,4 +428,27 @@ def test_activity_panel_date_filter_and_json_export(tmp_path, application, monke
     assert len(exported) == len(panel.events)
     assert any(event["event_type"] == "task.created" for event in exported)
     dispose_widget(panel, application)
+    dispose_widget(window, application)
+
+
+
+def test_task_dependency_graph_renders_prerequisite_relationships(tmp_path, application):
+    window = MainWindow(tmp_path / "dependency-graph.sqlite3")
+    project = window.workspace.create_project("Graph project")
+    prerequisite = window.workspace.intelligence.create_task(
+        project.project_id, title="Prepare data"
+    )
+    dependent = window.workspace.intelligence.create_task(
+        project.project_id, title="Analyze results"
+    )
+    window.workspace.intelligence.add_task_dependency(
+        project.project_id, dependent["task_id"], prerequisite["task_id"]
+    )
+    dialog = TaskDependencyGraphDialog(window.workspace, project.project_id)
+
+    assert len(dialog.node_items) == 2
+    assert prerequisite["task_id"] in dialog.node_items
+    assert dependent["task_id"] in dialog.node_items
+    assert len(dialog.scene.items()) >= 5
+    dispose_widget(dialog, application)
     dispose_widget(window, application)
