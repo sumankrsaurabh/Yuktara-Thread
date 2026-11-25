@@ -34,7 +34,7 @@ def test_tampered_package_fails_verification(tmp_path: Path) -> None:
         for item in src.infolist():
             data = src.read(item.filename)
             if item.filename == "files/notes.md":
-                data = b"changed"
+                data = b"tampered"
             dst.writestr(item, data)
 
     with pytest.raises(PackageError, match="SHA-256 mismatch"):
