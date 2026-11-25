@@ -6,7 +6,7 @@ from yuktara_thread.application.workspace import WorkspaceService
 def test_workspace_migrates_and_creates_project(tmp_path: Path) -> None:
     workspace = WorkspaceService(tmp_path / "workspace.sqlite3")
     project = workspace.create_project("NovaUI", "Desktop UI framework")
-    assert workspace.schema_version == 3
+    assert workspace.schema_version == 4
     assert project.name == "NovaUI"
     assert len(workspace.get_context(project.project_id)) == 6
     initial = workspace.context.history(project.project_id, "goals")
@@ -164,6 +164,12 @@ def test_workspace_import_restores_context_records_dependencies_and_files(tmp_pa
     )
 
     assert imported.name == "Portable project"
+    with receiving_workspace.database.read() as connection:
+        journal = connection.execute(
+            "SELECT status, project_id FROM handover_imports"
+        ).fetchone()
+    assert journal["status"] == "completed"
+    assert journal["project_id"] == imported.project_id
     assert imported.project_id != source_project.project_id
     assert (extracted / "files" / "README.md").read_text(encoding="utf-8") == "Portable instructions"
     context = {section.section_key: section.content for section in receiving_workspace.get_context(imported.project_id)}
@@ -196,6 +202,71 @@ def test_workspace_import_restores_context_records_dependencies_and_files(tmp_pa
     assert source_task_events[0]["payload"]["title"] in {
         "Design schema", "Implement storage"
     }
+
+
+def test_import_reconciliation_preserves_orphaned_files_for_manual_review(
+    tmp_path: Path,
+) -> None:
+    from datetime import datetime, timezone
+    from uuid import uuid4
+    from yuktara_thread.application.handover import reconcile_workspace_imports
+
+    workspace = WorkspaceService(tmp_path / "workspace.sqlite3")
+    destination = tmp_path / "orphaned-files"
+    destination.mkdir()
+    (destination / "README.md").write_text("Keep for review", encoding="utf-8")
+    now = datetime.now(timezone.utc).isoformat()
+    import_id = str(uuid4())
+    project_id = str(uuid4())
+    with workspace.database.transaction() as connection:
+        connection.execute(
+            """INSERT INTO handover_imports
+               (import_id, project_id, package_manifest_sha256, destination_path,
+                status, phase, error, created_at, updated_at)
+               VALUES (?, ?, ?, ?, 'files_ready', 'files_ready', NULL, ?, ?)""",
+            (import_id, project_id, "a" * 64, str(destination), now, now),
+        )
+
+    result = reconcile_workspace_imports(workspace)
+
+    assert len(result) == 1
+    assert result[0]["status"] == "recovery_required"
+    assert result[0]["project_present"] is False
+    assert result[0]["files_present"] is True
+    assert destination.joinpath("README.md").read_text(encoding="utf-8") == "Keep for review"
+    assert result[0]["error"]
+
+
+def test_import_reconciliation_marks_committed_project_complete(tmp_path: Path) -> None:
+    from datetime import datetime, timezone
+    from uuid import uuid4
+    from yuktara_thread.application.handover import reconcile_workspace_imports
+
+    workspace = WorkspaceService(tmp_path / "workspace.sqlite3")
+    project = workspace.create_project("Committed project")
+    destination = tmp_path / "committed-files"
+    destination.mkdir()
+    now = datetime.now(timezone.utc).isoformat()
+    import_id = str(uuid4())
+    with workspace.database.transaction() as connection:
+        connection.execute(
+            """INSERT INTO handover_imports
+               (import_id, project_id, package_manifest_sha256, destination_path,
+                status, phase, error, created_at, updated_at)
+               VALUES (?, ?, ?, ?, 'database_committed', 'database_committed', NULL, ?, ?)""",
+            (import_id, project.project_id, "b" * 64, str(destination), now, now),
+        )
+
+    result = reconcile_workspace_imports(workspace)
+
+    assert result[0]["status"] == "completed"
+    assert result[0]["project_present"] is True
+    assert result[0]["files_present"] is True
+    with workspace.database.read() as connection:
+        status = connection.execute(
+            "SELECT status FROM handover_imports WHERE import_id = ?", (import_id,)
+        ).fetchone()["status"]
+    assert status == "completed"
 
 
 def test_workspace_import_rejects_dependency_cycle_before_extracting(tmp_path: Path) -> None:
