@@ -50,3 +50,23 @@ def test_package_preview_and_import_cli(tmp_path: Path, capsys) -> None:
     imported = json.loads(capsys.readouterr().out)
     assert imported["imported"] is True
     assert (destination / "files" / "handover.md").read_text(encoding="utf-8") == "Next: implement preview."
+
+
+def test_project_export_cli_includes_workspace_context(tmp_path: Path, capsys) -> None:
+    database = tmp_path / "export.sqlite3"
+    files = tmp_path / "selected"
+    files.mkdir()
+    (files / "brief.md").write_text("A brief", encoding="utf-8")
+    assert main(["workspace", "init", "--database", str(database)]) == 0
+    capsys.readouterr()
+    assert main(["project", "create", "--database", str(database), "--name", "Export CLI"]) == 0
+    project = json.loads(capsys.readouterr().out)
+
+    assert main([
+        "project", "export", "--database", str(database),
+        "--project-id", project["project_id"], "--files", str(files),
+        "--output", str(tmp_path / "export.thread"),
+    ]) == 0
+    result = json.loads(capsys.readouterr().out)
+    assert result["exported"] is True
+    assert (tmp_path / "export.thread").is_file()
