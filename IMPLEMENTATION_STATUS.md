@@ -1,6 +1,6 @@
 # Implementation Status
 
-**Release:** 0.3.1-dev  
+**Release:** 0.4.0.dev0  
 **Status:** pre-alpha; not production-ready
 
 ## Implemented
@@ -23,6 +23,8 @@
 - [x] Structured desktop forms for decision, task, milestone and reference fields.
 - [x] Offscreen Qt smoke tests covering window startup, structured forms, task prerequisites, project archiving and activity filtering.
 - [x] Desktop package preview dialog with explicit file extraction to a user-selected new folder.
+- [x] Desktop import of verified handovers into the active workspace.
+- [x] Markdown handover report with structured context, decisions, tasks, milestones, references and dependency details.
 - [x] Markdown handover report generated from verified package metadata, file inventory and structured project context.
 - [x] Workspace-aware package export for context sections, decisions, tasks, milestones, references, task dependencies and recent activity.
 - [x] CLI command for workspace-aware project export with an explicit selected-files directory.
@@ -30,6 +32,7 @@
 - [x] Atomic SQLite restoration transaction; failed database restoration removes newly extracted files.
 - [x] Desktop package preview can import a handover into the current workspace.
 - [x] CLI `preview` and `import` commands for verified packages.
+- [x] CLI `project export` and `project import` for workspace-aware handover round trips.
 - [x] Package tests for successful extraction, tamper rejection, existing destinations and unsafe paths.
 - [x] Dedicated Linux desktop CI job; PySide6 6.9 runtime smoke tests pass without shutdown errors.
 - [x] Automated core tests and GitHub Actions Python 3.11–3.13 matrix.
