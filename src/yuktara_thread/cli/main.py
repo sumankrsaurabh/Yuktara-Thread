@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 
 from yuktara_thread.application.backup import backup_workspace, restore_workspace
-from yuktara_thread.application.handover import export_workspace_project, import_workspace_project
+from yuktara_thread.application.handover import (\n    export_workspace_project, import_workspace_project, reconcile_workspace_imports,\n)
 from yuktara_thread.application.workspace import WorkspaceService
 from yuktara_thread.application.secret_scan import scan_selected_files
 from yuktara_thread.application.search import search_workspace
@@ -44,6 +44,12 @@ def build_parser() -> argparse.ArgumentParser:
                            help="New backup file path (required for backup)")
     workspace.add_argument("--backup", type=Path,
                            help="Existing backup file path (required for restore)")
+
+    import_recovery = commands.add_parser(
+        "import-recovery",
+        help="Reconcile interrupted workspace handover imports without deleting data",
+    )
+    import_recovery.add_argument("--database", required=True, type=Path)
 
     search = commands.add_parser("search", help="Search local workspace project context and records")
     search.add_argument("--database", required=True, type=Path)
@@ -148,6 +154,15 @@ def main(argv: list[str] | None = None) -> int:
                 print(json.dumps({"restored": True, "backup": str(args.backup),
                                   "database": str(restored)}, indent=2))
                 return 0
+        if args.command == "import-recovery":
+            workspace = WorkspaceService(args.database)
+            results = reconcile_workspace_imports(workspace)
+            print(json.dumps({
+                "reconciled_count": len(results),
+                "imports": results,
+                "note": "No files or project records were deleted. Review recovery_required entries manually.",
+            }, indent=2, ensure_ascii=False))
+            return 0
         if args.command == "search":
             workspace = WorkspaceService(args.database)
             results = search_workspace(
