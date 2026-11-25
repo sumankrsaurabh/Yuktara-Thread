@@ -147,6 +147,9 @@ class ProjectIntelligenceRepository:
         table, id_column = self.TABLES[entity_type]
         now = _now()
         with self.database.transaction() as connection:
+            project = connection.execute("SELECT status FROM projects WHERE project_id = ?", (project_id,)).fetchone()
+            if project is None or project["status"] != "active":
+                raise LookupError("Active project not found")
             row = connection.execute(
                 f"SELECT title FROM {table} WHERE {id_column} = ? AND project_id = ?",
                 (entity_id, project_id),
@@ -193,6 +196,27 @@ class ProjectIntelligenceRepository:
             )
             append_project_event(connection, project_id=project_id, event_type="task.dependency_added",
                 entity_type="task", entity_id=task_id,
+                payload={"depends_on_task_id": depends_on_task_id}, created_at=now)
+
+    def remove_task_dependency(self, project_id: str, task_id: str,
+                                depends_on_task_id: str) -> None:
+        """Remove one prerequisite edge and append its event atomically."""
+        now = _now()
+        with self.database.transaction() as connection:
+            project = connection.execute("SELECT status FROM projects WHERE project_id = ?", (project_id,)).fetchone()
+            if project is None or project["status"] != "active":
+                raise LookupError("Active project not found")
+            cursor = connection.execute(
+                """DELETE FROM task_dependencies
+                   WHERE task_id = ? AND depends_on_task_id = ?
+                   AND task_id IN (SELECT task_id FROM tasks WHERE project_id = ?)
+                   AND depends_on_task_id IN (SELECT task_id FROM tasks WHERE project_id = ?)""",
+                (task_id, depends_on_task_id, project_id, project_id),
+            )
+            if cursor.rowcount != 1:
+                raise LookupError("Task dependency not found in project")
+            append_project_event(connection, project_id=project_id,
+                event_type="task.dependency_removed", entity_type="task", entity_id=task_id,
                 payload={"depends_on_task_id": depends_on_task_id}, created_at=now)
 
     def list_task_dependencies(self, task_id: str) -> list[str]:
