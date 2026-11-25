@@ -668,6 +668,8 @@ class ActivityPanel(QWidget):
         for event in self.events:
             event_type = str(event["event_type"])
             label = self.LABELS.get(event_type, event_type.replace(".", " ").title())
+            if (event.get("payload") or {}).get("_origin") == "imported":
+                label += " · imported"
             detail = self._description(event)
             timestamp = str(event["created_at"])
             event_date = timestamp[:10]
