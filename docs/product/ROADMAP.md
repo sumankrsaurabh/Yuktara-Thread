@@ -23,10 +23,13 @@
 - [x] Initial PySide6 desktop shell and workspace navigation.
 - [x] Context editor and activity timeline.
 - [x] Structured create/edit forms for decisions, tasks, milestones and references.
-- [x] Offscreen Qt smoke-test harness (awaiting passing CI verification).
-- [ ] Project metadata editing and archive controls.
-- [ ] Task dependency editing and visualization.
-- [ ] Human-readable activity details and filters.
+- [x] Project metadata editing and audited archive control.
+- [x] Task prerequisite add/remove controls.
+- [x] Human-readable activity labels, text search and event-type filters.
+- [x] Linux offscreen desktop runtime smoke tests.
+- [ ] Archived-project restore UI.
+- [ ] Task dependency graph visualization.
+- [ ] Activity date-range filters and export.
 - [ ] Desktop design-system refinement and accessibility.
 - [ ] Package preview, safe import and handover report.
 - [ ] Secret inclusion warnings and readiness checks.
