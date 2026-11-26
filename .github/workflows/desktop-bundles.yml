@@ -47,6 +47,8 @@ jobs:
         with:
           name: yuktara-thread-${{ runner.os }}
           path: |
+            YuktaraThread.exe
+            YuktaraThread.exe.sha256
             yuktara-thread-*.zip
             yuktara-thread-*.tar.gz
             yuktara-thread-*.sha256
