@@ -22,13 +22,19 @@ jobs:
           python-version: "3.12"
       - run: python -m pip install --upgrade pip
       - run: python -m pip install -e ".[desktop]" pyinstaller
-      - run: pyinstaller --noconfirm --clean --windowed --name YuktaraThread --paths src --collect-all PySide6 --collect-all shiboken6 scripts/desktop_entry.py
+      - if: runner.os == 'Windows'
+        run: pyinstaller --noconfirm --clean --onefile --windowed --name YuktaraThread --paths src --collect-all PySide6 --collect-all shiboken6 scripts/desktop_entry.py
+      - if: runner.os != 'Windows'
+        run: pyinstaller --noconfirm --clean --windowed --name YuktaraThread --paths src --collect-all PySide6 --collect-all shiboken6 scripts/desktop_entry.py
       - if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          Compress-Archive -Path dist/YuktaraThread/* -DestinationPath yuktara-thread-windows.zip
-          $hash = (Get-FileHash yuktara-thread-windows.zip -Algorithm SHA256).Hash.ToLower()
-          "$hash  yuktara-thread-windows.zip" | Set-Content yuktara-thread-windows.zip.sha256
+          Copy-Item dist/YuktaraThread.exe .\YuktaraThread.exe
+          Compress-Archive -Path YuktaraThread.exe -DestinationPath yuktara-thread-windows.zip
+          $hash = (Get-FileHash YuktaraThread.exe -Algorithm SHA256).Hash.ToLower()
+          "$hash  YuktaraThread.exe" | Set-Content YuktaraThread.exe.sha256
+          $zipHash = (Get-FileHash yuktara-thread-windows.zip -Algorithm SHA256).Hash.ToLower()
+          "$zipHash  yuktara-thread-windows.zip" | Set-Content yuktara-thread-windows.zip.sha256
       - if: runner.os == 'macOS'
         run: |
           ditto -c -k --sequesterRsrc --keepParent dist/YuktaraThread.app yuktara-thread-macos.zip
@@ -45,3 +51,33 @@ jobs:
             yuktara-thread-*.tar.gz
             yuktara-thread-*.sha256
           if-no-files-found: error
+
+  publish-development-release:
+    if: startsWith(github.ref, 'refs/heads/dev/')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: release-assets
+          merge-multiple: true
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v0.6.8-dev.${{ github.run_number }}
+          name: Yuktara Thread 0.6.8 Development Preview ${{ github.run_number }}
+          target_commitish: ${{ github.sha }}
+          prerelease: true
+          draft: false
+          generate_release_notes: true
+          files: release-assets/*
+          body: |
+            **Development preview — not a stable release.**
+
+            Windows: download `YuktaraThread.exe` for a direct executable, or `yuktara-thread-windows.zip` for the packaged bundle. Verify the SHA-256 checksum before running.
+
+            This build is unsigned and intended for controlled testing. Back up important workspace data. The application may be flagged by Windows SmartScreen because it is not code-signed.
+
+            Build version: `0.6.8.dev0`
+            Commit: `${{ github.sha }}`
