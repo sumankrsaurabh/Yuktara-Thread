@@ -574,6 +574,43 @@ def test_activity_panel_loads_older_events_incrementally(tmp_path, application):
 
 
 
+def test_import_recovery_dialog_shows_journal_history_and_copies_destination(
+    tmp_path, application
+):
+    from datetime import datetime, timezone
+
+    from yuktara_thread.application.workspace import WorkspaceService
+
+    workspace = WorkspaceService(tmp_path / "import-history-ui.sqlite3")
+    destination = tmp_path / "completed-import"
+    destination.mkdir()
+    now = datetime.now(timezone.utc).isoformat()
+    with workspace.database.transaction() as connection:
+        for import_id, status in (("completed-one", "completed"), ("failed-one", "failed")):
+            connection.execute(
+                """INSERT INTO handover_imports
+                   (import_id, project_id, package_manifest_sha256, destination_path,
+                    status, phase, error, created_at, updated_at)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (
+                    import_id, "history-project", "d" * 64, str(destination),
+                    status, "finished", None, now, now,
+                ),
+            )
+
+    dialog = ImportRecoveryDialog(workspace)
+    assert dialog.records.count() == 0
+    dialog.show_history.setChecked(True)
+    assert dialog.records.count() == 2
+    dialog.search.setText("failed-one")
+    assert dialog.records.count() == 1
+    assert dialog.records.item(0).data(Qt.ItemDataRole.UserRole) == "failed-one"
+    dialog.copy_destination_path()
+    assert QApplication.clipboard().text() == str(destination)
+    assert not dialog.reconcile_button.isEnabled()
+    dispose_widget(dialog, application)
+
+
 def test_import_recovery_dialog_reconciles_without_deleting_files_or_projects(
     tmp_path, application, monkeypatch
 ):
