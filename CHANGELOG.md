@@ -2,6 +2,17 @@
 
 All notable changes to Yuktara Thread are documented here. Development versions may change before a stable release.
 
+## 0.6.8.dev0 — 2026-11-25
+
+### Security
+- Reject archive paths that collide on common case-insensitive or Unicode-normalizing filesystems.
+- Reject file/directory prefix conflicts before extraction, avoiding cross-platform extraction ambiguity.
+- Parse package manifests with strict JSON handling: duplicate object keys and non-standard NaN/Infinity values are rejected consistently during verification, preview and extraction.
+- Add regression tests for case-folding collisions, Unicode normalization collisions, parent-path conflicts, duplicate manifest keys and non-standard numeric constants.
+
+### Compatibility
+- Existing valid `.thread` packages retain the same format and version; no migration is required.
+
 ## 0.6.7.dev0 — 2026-11-25
 
 ### Added

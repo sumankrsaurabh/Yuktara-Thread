@@ -10,6 +10,7 @@ import os
 import stat
 import shutil
 import tempfile
+import unicodedata
 import zipfile
 from pathlib import Path, PurePosixPath
 from typing import Any
@@ -48,6 +49,41 @@ def _safe_archive_name(name: str) -> str:
             raise PackageError(f"Reserved device name in archive path: {name!r}")
     return path.as_posix()
 
+
+def _reject_duplicate_json_keys(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+    result: dict[str, Any] = {}
+    for key, value in pairs:
+        if key in result:
+            raise PackageError(f"Duplicate JSON object key: {key}")
+        result[key] = value
+    return result
+
+def _reject_json_constant(value: str) -> None:
+    raise PackageError(f"Non-standard JSON numeric constant is not allowed: {value}")
+
+def _load_json_bytes(data: bytes) -> Any:
+    """Decode strict UTF-8 JSON, rejecting duplicate keys and NaN/Infinity."""
+    try:
+        return json.loads(data.decode("utf-8"), object_pairs_hook=_reject_duplicate_json_keys, parse_constant=_reject_json_constant)
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise PackageError(f"Invalid JSON: {exc}") from exc
+
+def _validate_archive_path_collisions(names: set[str]) -> None:
+    """Reject names that collide on common case-insensitive/normalizing filesystems."""
+    normalized: dict[str, str] = {}
+    for name in names:
+        key = unicodedata.normalize("NFC", name).casefold()
+        previous = normalized.get(key)
+        if previous is not None:
+            raise PackageError(f"Archive paths collide on common filesystems: {previous!r} and {name!r}")
+        normalized[key] = name
+    for key, original in normalized.items():
+        parts = key.split("/")
+        for index in range(1, len(parts)):
+            parent_key = "/".join(parts[:index])
+            parent = normalized.get(parent_key)
+            if parent is not None:
+                raise PackageError(f"Archive file path conflicts with a parent path: {parent!r} and {original!r}")
 
 def _sha256_file(path: Path) -> str:
     digest = hashlib.sha256()
@@ -149,12 +185,13 @@ def verify_package(package_file: Path) -> dict[str, Any]:
                 total_size += info.file_size
                 if total_size > MAX_TOTAL_BYTES + MAX_MANIFEST_BYTES:
                     raise PackageError("Archive exceeds total uncompressed size limit")
+            _validate_archive_path_collisions(names)
             if "manifest.json" not in names:
                 raise PackageError("manifest.json is missing")
             manifest_info = archive.getinfo("manifest.json")
             if manifest_info.file_size > MAX_MANIFEST_BYTES:
                 raise PackageError("Manifest exceeds size limit")
-            manifest = json.loads(archive.read("manifest.json").decode("utf-8"))
+            manifest = _load_json_bytes(archive.read("manifest.json"))
             if not isinstance(manifest, dict):
                 raise PackageError("Manifest must be a JSON object")
             if manifest.get("format") != FORMAT_ID:
@@ -216,7 +253,7 @@ def preview_package(package_file: Path) -> dict[str, Any]:
     try:
         with zipfile.ZipFile(package_file, "r") as archive:
             manifest_bytes = archive.read("manifest.json")
-            manifest = json.loads(manifest_bytes.decode("utf-8"))
+            manifest = _load_json_bytes(manifest_bytes)
     except (OSError, zipfile.BadZipFile, UnicodeDecodeError, json.JSONDecodeError) as exc:
         raise PackageError(f"Could not read package preview: {exc}") from exc
 
@@ -278,7 +315,7 @@ def import_package(package_file: Path, destination: Path) -> Path:
             manifest_bytes = archive.read("manifest.json")
             if hashlib.sha256(manifest_bytes).hexdigest() != preview["manifest_sha256"]:
                 raise PackageError("Package manifest changed during import")
-            manifest = json.loads(manifest_bytes.decode("utf-8"))
+            manifest = _load_json_bytes(manifest_bytes)
             for item in manifest["files"]:
                 archive_path = _safe_archive_name(item["path"])
                 if not archive_path.startswith("files/") or archive_path == "files":
